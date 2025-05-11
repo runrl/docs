@@ -71,19 +71,36 @@ run = client.create_run(
 - `model_name` (str, required): The name of the model
 - `prompt_file` (str, required): ID of the uploaded prompt file
 - `reward_file` (str, required): ID of the uploaded reward file
-- `gpu_type` (str, optional): The type of GPU to use. Defaults to "H100"
-- `n_gpus` (int, optional): The number of GPUs. Defaults to 8
-- `lora_rank` (int, optional): The LoRA rank. Defaults to 0
-- `max_seq_length` (int, optional): Maximum sequence length. Defaults to 1024
-- `epochs` (int, optional): Number of training epochs. Defaults to 1
-- `learning_rate` (float, optional): Learning rate. Defaults to 5e-6
-- `adam_beta1` (float, optional): Adam beta1 parameter
-- `adam_beta2` (float, optional): Adam beta2 parameter
-- `weight_decay` (float, optional): Weight decay
-- `warmup_ratio` (float, optional): Warmup ratio
-- `kl_beta` (float, optional): KL beta parameter
-- `hf_token` (str, optional): Hugging Face token
-- `turbo` (bool, optional): Whether to use turbo mode. Defaults to True
+
+**Hyperparameters**:
+
+- `learning_rate` (float, optional): Controls the step size for updating model weights. Smaller values lead to slower but potentially more stable learning. In GRPO (Generative Reinforcement Learning with Proximal Optimization), it affects how quickly the agent's policy adapts. Defaults to 5e-6.
+
+- `weight_decay` (float, optional): A regularization technique that penalizes large weights, helping to prevent overfitting and improve the model's generalization.
+
+- `adam_beta1` (float, optional): The exponential decay rate for the first moment estimates (mean of gradients) in the Adam optimizer. Typically around 0.9.
+
+- `adam_beta2` (float, optional): The exponential decay rate for the second moment estimates (variance of gradients) in the Adam optimizer. Typically around 0.999.
+
+- `warmup_ratio` (float, optional): Fraction of total training steps for a learning rate warmup, where the learning rate gradually increases. Helps stabilize training early on.
+
+- `kl_beta` (float, optional): Coefficient for the KL divergence penalty. It controls how much the policy can change in one update, ensuring stability. Setting this to 0.0 will significantly reduce memory requirements.
+
+**Configuration Parameters**:
+
+- `lora_rank` (int, optional): The rank of the Low-Rank Adaptation matrices. Higher values allow for more expressive parameter updates but require more memory and computation. A value of 0 means LoRA is not used. Defaults to 0.
+
+- `max_seq_length` (int, optional): The maximum length of input sequences. Longer sequences provide more context but require more memory and computation. Defaults to 1024.
+
+- `epochs` (int, optional): The number of complete passes through the training dataset. Defaults to 1.
+
+- `gpu_type` (str, optional): The type of GPU to use for training. Options include "H100", "A100", etc. Defaults to "H100".
+
+- `n_gpus` (int, optional): The number of GPUs to use for training. Defaults to 8.
+
+- `turbo` (bool, optional): When enabled, uses a specific configuration optimized for speed (requires H100 GPUs and n_gpus=8). Defaults to True.
+
+- `hf_token` (str, optional): Hugging Face token for accessing gated models.
 
 **Returns**: A dictionary containing information about the created run.
 
@@ -116,6 +133,8 @@ result = client.cancel_run("run-123")
 **Returns**: A dictionary containing the result of the cancellation.
 
 ## Prompt Files
+
+For details on prompt file format requirements, see the [File Formats](/docs/file-formats#prompt-files) documentation.
 
 ### list_prompt_files()
 
@@ -171,6 +190,8 @@ preview = client.get_prompt_file_preview("file-123")
 **Returns**: A dictionary containing the file preview.
 
 ## Reward Files
+
+For details on reward function format requirements, see the [File Formats](/docs/file-formats#reward-functions) documentation.
 
 ### list_reward_files()
 

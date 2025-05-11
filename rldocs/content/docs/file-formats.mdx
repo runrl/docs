@@ -1,0 +1,128 @@
+---
+title: File Formats
+description: Detailed guide on how to format prompt files and reward functions for RunRL
+---
+
+# File Formats
+
+This guide explains how to properly format prompt files and reward functions for use with RunRL.
+
+## Prompt Files
+
+Prompt files contain the examples that your model will learn from during training. They define the inputs that will be sent to the model and the expected outputs.
+
+### Format Requirements
+
+Prompt files must be in JSONL (JSON Lines) format, with each line containing a complete, valid JSON object. The file extension should be `.jsonl`.
+
+### Required Structure
+
+Each line in your prompt file must include:
+
+- `prompt`: An array of message objects, where each message has:
+  - `role`: The role of the speaker (e.g., "system", "user")
+  - `content`: The actual message text
+
+### Additional Fields
+
+You can include additional fields that your reward function might need, such as `expected_result` for evaluating correctness.
+
+### Example Prompt File
+
+```jsonl
+{"prompt":[{"role":"system","content":"You are an expert at mathematics."},{"role":"user","content":"What is the value of this expression: { ((54 - 140 * 118 + 130) + 197) + 46 }? Think for as long as you want, and then give your answer inside of <answer></answer> XML tags."}],"expected_result":-16093}
+{"prompt":[{"role":"system","content":"You are an expert at mathematics."},{"role":"user","content":"What is the value of this expression: { (56 + 141 + 74) + 135 }? Think for as long as you want, and then give your answer inside of <answer></answer> XML tags."}],"expected_result":406}
+{"prompt":[{"role":"system","content":"You are an expert at mathematics."},{"role":"user","content":"What is the value of this expression: { (194 + 92 + 120) + 26 - 22 }? Think for as long as you want, and then give your answer inside of <answer></answer> XML tags."}],"expected_result":410}
+```
+
+### Important Notes
+
+- Each line must be a complete, valid JSON object
+- No trailing commas are allowed
+- The file should contain a wide distribution of prompts that your model may potentially encounter
+- Generally, aim to have at least 100 distinct examples, but this depends on your specific task
+
+## Reward Functions
+
+Reward functions evaluate the model's responses and provide feedback signals that guide the learning process.
+
+### Format Requirements
+
+Reward functions must be Python scripts (`.py` files) that define a specific function called `reward_func`.
+
+### Function Signature
+
+```python
+def reward_func(prompts, completions, **kwargs) -> list[float]:
+    # Your reward logic here
+    return rewards
+```
+
+### Parameters
+
+- `prompts`: A list of the prompts that were sent to the model. Each item corresponds to a prompt object from your JSONL file.
+- `completions`: A list of completions from the model. Each completion is typically a list itself, where the first element contains the model's response. Access the generated text using `completion[0]['content']` for each completion.
+- `**kwargs`: Additional data from your prompt JSONL file entries (like `expected_result`) can be accessed using `kwargs.get('your_key_name')`.
+
+### Return Value
+
+The function must return a `list[float]`, where each float is the reward score for the corresponding completion.
+
+### Example Reward Function
+
+This example reward function evaluates math problems, rewarding correct answers and penalizing the use of numerals in the thinking process:
+
+```python
+def extract_answer(str):
+    # Extracts answer from between <answer> tags
+    if "<answer>" in str and "</answer>" in str:
+        return str.split("<answer>")[1].split("</answer>")[0]
+    else:
+        return ""
+
+def response_penalty(str):
+    # Penalizes use of digits in the response
+    return sum(1 for c in str if c.isdigit())
+
+def reward_func(prompts, completions, **kwargs):
+    # Get expected result from kwargs
+    expected_result = kwargs.get('expected_result')
+    if expected_result is None:
+        raise ValueError("expected_result is required for this reward function")
+    
+    # Get model responses from completions
+    model_responses = [completion[0]['content'] 
+                      for completion in completions]
+    
+    # Extract answers from responses
+    extracted_answers = [extract_answer(r) 
+                        for r in model_responses]
+    
+    # Calculate correctness rewards (10.0 for correct, 0.0 for incorrect)
+    response_correctness_rewards = [
+        10.0 if extracted_answer == expected_result else 0.0 
+        for extracted_answer in extracted_answers
+    ]
+    
+    # Calculate penalties for using digits
+    response_penalty_rewards = [
+        -response_penalty(model_response) 
+        for model_response in model_responses
+    ]
+    
+    # Combine rewards and penalties
+    rewards = [r + p for r, p in zip(
+        response_correctness_rewards, 
+        response_penalty_rewards
+    )]
+    
+    return rewards
+```
+
+### Best Practices
+
+- Document your reward criteria clearly
+- Handle missing or invalid inputs gracefully
+- Use helper functions for complex logic
+- Consider both positive rewards for desired behaviors and penalties for undesired behaviors
+- Test your reward function with sample completions before using it for training
