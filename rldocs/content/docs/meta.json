@@ -1,29 +1,11 @@
 {
   "title": "RunRL Documentation",
   "pages": [
-    {
-      "title": "Introduction",
-      "path": "/"
-    },
-    {
-      "title": "Installation",
-      "path": "/installation"
-    },
-    {
-      "title": "Authentication",
-      "path": "/authentication"
-    },
-    {
-      "title": "API Reference",
-      "path": "/api-reference"
-    },
-    {
-      "title": "Examples",
-      "path": "/examples"
-    },
-    {
-      "title": "Troubleshooting",
-      "path": "/troubleshooting"
-    }
+    "index",
+    "installation",
+    "authentication",
+    "api-reference",
+    "examples",
+    "troubleshooting"
   ]
 }
