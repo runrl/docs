@@ -1,0 +1,85 @@
+---
+title: Installation
+description: How to install the RunRL Python client
+---
+
+# Installation
+
+The RunRL Python client can be easily installed using pip or uv, Python package managers.
+
+## Requirements
+
+- Python 3.7 or higher
+- pip or uv (Python package managers)
+
+## Installing from PyPI
+
+The recommended way to install RunRL is via pip or uv:
+
+```bash
+# Using pip
+pip install runrl
+
+# Using uv
+uv pip install runrl
+```
+
+This will install the latest stable version (0.1.15) of the RunRL client library and all its dependencies.
+
+## Installing a Specific Version
+
+If you need to install a specific version of RunRL:
+
+```bash
+# Using pip
+pip install runrl==0.1.15  # Or another specific version
+
+# Using uv
+uv pip install runrl==0.1.15  # Or another specific version
+```
+
+## Upgrading
+
+To upgrade to the latest version:
+
+```bash
+# Using pip
+pip install --upgrade runrl
+
+# Using uv
+uv pip install --upgrade runrl
+```
+
+## Installing from Source
+
+For development purposes, you can install RunRL directly from the source code:
+
+```bash
+git clone https://github.com/runrl/runrl.git
+cd runrl
+# Using pip
+pip install -e .
+# Using uv
+uv pip install -e .
+```
+
+## Verifying Installation
+
+You can verify that RunRL is installed correctly by importing it in Python:
+
+```python
+import runrl
+print(runrl.__version__)  # Should print the installed version
+```
+
+## Dependencies
+
+RunRL depends on the following Python packages, which will be automatically installed:
+
+- `requests`: For making HTTP requests to the RunRL API
+- `websockets`: For streaming logs via WebSockets
+- `asyncio`: For asynchronous operations
+
+## Next Steps
+
+After installation, you'll need to [authenticate](/docs/authentication) with your API key to start using RunRL.

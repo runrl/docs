@@ -1,0 +1,345 @@
+---
+title: Troubleshooting
+description: Solutions for common issues with the RunRL Python client
+---
+
+# Troubleshooting
+
+This guide provides solutions for common issues you might encounter when using the RunRL Python client.
+
+## Authentication Issues
+
+### Invalid API Key
+
+**Symptom**: You receive an `AuthenticationError` when initializing the client.
+
+**Solution**:
+1. Verify that your API key is correct and starts with `rl-`
+2. Check if your API key has expired or been revoked
+3. Generate a new API key from the RunRL dashboard
+
+```python
+try:
+    client = RunRL(api_key="rl-your-api-key")
+except AuthenticationError as e:
+    print(f"Authentication failed: {e}")
+    # Generate a new API key or check the existing one
+```
+
+### API Key Environment Variable Not Set
+
+**Symptom**: You get a `ValueError` when trying to get the API key from an environment variable.
+
+**Solution**:
+1. Ensure you've set the environment variable correctly
+2. Check for typos in the environment variable name
+3. Verify the environment variable is accessible in your current session
+
+```bash
+# Set the environment variable
+export RUNRL_API_KEY="rl-your-api-key"
+
+# Verify it's set correctly
+echo $RUNRL_API_KEY
+```
+
+## File Upload Issues
+
+### File Not Found
+
+**Symptom**: You get a `FileNotFoundError` when trying to upload a file.
+
+**Solution**:
+1. Check if the file exists at the specified path
+2. Verify the path is correct (absolute vs. relative)
+3. Ensure you have read permissions for the file
+
+```python
+import os
+
+file_path = "path/to/file.jsonl"
+if not os.path.exists(file_path):
+    print(f"File not found: {file_path}")
+    # Handle the error (e.g., prompt for a valid file path)
+```
+
+### Invalid File Format
+
+**Symptom**: Your file upload is rejected by the API.
+
+**Solution**:
+1. Ensure your file is in the correct format (e.g., JSONL for prompt and reward files)
+2. Validate the file content before uploading
+3. Check for any formatting errors in the file
+
+```python
+# Example: Validate a JSONL file before uploading
+import json
+
+def validate_jsonl(file_path):
+    try:
+        with open(file_path, 'r') as f:
+            for line_num, line in enumerate(f, 1):
+                try:
+                    json.loads(line)
+                except json.JSONDecodeError:
+                    print(f"Invalid JSON on line {line_num}: {line}")
+                    return False
+        return True
+    except Exception as e:
+        print(f"Error validating file: {e}")
+        return False
+
+if validate_jsonl("path/to/file.jsonl"):
+    client.upload_prompt_file("path/to/file.jsonl")
+else:
+    print("File validation failed")
+```
+
+## Run Creation Issues
+
+### Missing Required Parameters
+
+**Symptom**: You get a `ValueError` about missing required arguments when creating a run.
+
+**Solution**:
+1. Ensure you're providing all required parameters (`model_name`, `prompt_file`, `reward_file`)
+2. Check for typos in parameter names
+3. Verify the parameter values are valid
+
+```python
+try:
+    run = client.create_run(
+        model_name="Qwen/Qwen3-4B",
+        prompt_file="file-123",
+        reward_file="file-456"
+    )
+except ValueError as e:
+    print(f"Error creating run: {e}")
+    # Handle the error (e.g., prompt for missing parameters)
+```
+
+### Turbo Mode Constraints
+
+**Symptom**: You get a `ValueError` about turbo mode requiring specific GPU settings.
+
+**Solution**:
+1. When using `turbo=True`, ensure `gpu_type="H100"` and `n_gpus=8`
+2. Alternatively, set `turbo=False` if you want to use different GPU settings
+
+```python
+# Correct configuration for turbo mode
+run = client.create_run(
+    model_name="Qwen/Qwen3-4B",
+    prompt_file="file-123",
+    reward_file="file-456",
+    gpu_type="H100",
+    n_gpus=8,
+    turbo=True
+)
+
+# Alternative: Disable turbo mode for custom GPU settings
+run = client.create_run(
+    model_name="Qwen/Qwen3-4B",
+    prompt_file="file-123",
+    reward_file="file-456",
+    gpu_type="A100",
+    n_gpus=4,
+    turbo=False
+)
+```
+
+## Resource Not Found Issues
+
+### Run Not Found
+
+**Symptom**: You get a `NotFoundError` when trying to access a run.
+
+**Solution**:
+1. Verify the run ID is correct
+2. Check if the run has been deleted
+3. Ensure you have permission to access the run
+
+```python
+try:
+    run_details = client.get_run_details("run-123")
+except NotFoundError as e:
+    print(f"Run not found: {e}")
+    # List available runs to find the correct ID
+    runs = client.list_runs()
+    print("Available runs:")
+    for run in runs:
+        print(f"ID: {run['id']}, Status: {run['status']}")
+```
+
+### File Not Found
+
+**Symptom**: You get a `NotFoundError` when trying to access a file.
+
+**Solution**:
+1. Verify the file ID is correct
+2. Check if the file has been deleted
+3. Ensure you have permission to access the file
+
+```python
+try:
+    file_preview = client.get_prompt_file_preview("file-123")
+except NotFoundError as e:
+    print(f"File not found: {e}")
+    # List available files to find the correct ID
+    files = client.list_prompt_files()
+    print("Available prompt files:")
+    for file in files:
+        print(f"ID: {file['id']}, Name: {file['friendly_name']}")
+```
+
+## Network and API Issues
+
+### Connection Errors
+
+**Symptom**: You get a `RunRLError` with a message about HTTP request failure.
+
+**Solution**:
+1. Check your internet connection
+2. Verify the API endpoint is accessible
+3. Check if there are any firewall or proxy issues
+
+```python
+try:
+    client.list_runs()
+except RunRLError as e:
+    if "HTTP request failed" in str(e):
+        print("Network connection issue. Please check your internet connection.")
+    else:
+        print(f"Error: {e}")
+```
+
+### API Server Errors
+
+**Symptom**: You get an `APIServerError` with a 5xx status code.
+
+**Solution**:
+1. The issue is on the server side, not your code
+2. Wait and try again later
+3. Check the RunRL status page for any reported outages
+
+```python
+import time
+
+max_retries = 3
+retry_delay = 5  # seconds
+
+for attempt in range(max_retries):
+    try:
+        result = client.list_runs()
+        break  # Success, exit the loop
+    except APIServerError as e:
+        print(f"Server error (attempt {attempt+1}/{max_retries}): {e}")
+        if attempt < max_retries - 1:
+            print(f"Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+        else:
+            print("Max retries reached. Please try again later.")
+```
+
+## Asynchronous Operations
+
+### Streaming Logs Issues
+
+**Symptom**: You get an error when trying to use `stream_logs()`.
+
+**Solution**:
+1. Ensure you're using the async function correctly
+2. Use `asyncio.run()` to run the async function from synchronous code
+3. If in an environment that already has an event loop (e.g., Jupyter), use a different approach
+
+```python
+# Correct way to use stream_logs in a script
+import asyncio
+
+async def stream_logs_example():
+    async for log_entry in client.stream_logs("run-123", follow=True):
+        print(f"[{log_entry['timestamp']}] {log_entry['message']}")
+
+# Run the async function
+asyncio.run(stream_logs_example())
+```
+
+For Jupyter notebooks or environments with an existing event loop:
+
+```python
+import nest_asyncio
+import asyncio
+
+# Apply nest_asyncio to allow nested event loops
+nest_asyncio.apply()
+
+async def stream_logs_example():
+    async for log_entry in client.stream_logs("run-123", follow=True):
+        print(f"[{log_entry['timestamp']}] {log_entry['message']}")
+
+# Run the async function
+await stream_logs_example()
+```
+
+## Debugging Tips
+
+### Enable Verbose Logging
+
+To get more information about what's happening, you can enable verbose logging:
+
+```python
+import logging
+
+# Set up logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+# Now RunRL client operations will log detailed information
+client = RunRL(api_key="rl-your-api-key")
+```
+
+### Inspect Request and Response Details
+
+For advanced debugging, you can use a request session with a custom event hook:
+
+```python
+import requests
+from runrl import RunRL
+
+# Create a session with logging
+session = requests.Session()
+
+def log_request_details(response, *args, **kwargs):
+    request = response.request
+    print(f"Request: {request.method} {request.url}")
+    print(f"Response: {response.status_code} {response.reason}")
+    
+session.hooks["response"] = [log_request_details]
+
+# Use the custom session with RunRL
+# Note: This is a hypothetical example and not directly supported by the RunRL client
+# You would need to modify the RunRL client to accept a custom session
+```
+
+## Common Error Messages and Solutions
+
+| Error Message | Likely Cause | Solution |
+|---------------|--------------|----------|
+| "Authentication failed: Unauthorized" | Invalid API key | Check your API key and regenerate if necessary |
+| "Missing required arguments" | Required parameters not provided | Ensure all required parameters are included |
+| "Resource not found" | Invalid ID or deleted resource | Verify the resource ID and check if it exists |
+| "Permission denied" | Insufficient permissions | Ensure you have the necessary permissions for the operation |
+| "Turbo mode requires 8xH100 GPUs" | Incompatible GPU settings with turbo mode | Use H100 GPUs with n_gpus=8, or set turbo=False |
+| "HTTP request failed" | Network or connectivity issue | Check your internet connection and try again |
+| "Server error" | Issue on the RunRL server | Wait and try again later |
+
+## Getting Help
+
+If you're still experiencing issues after trying the solutions in this guide:
+
+1. Check the [RunRL documentation](https://docs.runrl.ai) for updates
+2. Contact RunRL support at support@runrl.ai
+3. Visit the [RunRL community forum](https://community.runrl.ai) for help from other users

@@ -1,0 +1,106 @@
+---
+title: Authentication
+description: How to authenticate with the RunRL API
+---
+
+# Authentication
+
+The RunRL client uses API key authentication to securely access the RunRL API. This page explains how to obtain and use your API key.
+
+## Obtaining an API Key
+
+To obtain an API key:
+
+1. Sign up for an account at [RunRL](https://runrl.ai)
+2. Navigate to your account settings
+3. Generate a new API key
+4. Copy the API key (it starts with `rl-`)
+
+## Using Your API Key
+
+When initializing the RunRL client, you need to provide your API key:
+
+```python
+from runrl import RunRL
+
+# Initialize with your API key
+client = RunRL(api_key="rl-your-api-key")
+```
+
+## API Key Validation
+
+The RunRL client automatically validates your API key when you initialize it:
+
+```python
+try:
+    client = RunRL(api_key="rl-your-api-key")
+    print("API key is valid!")
+except Exception as e:
+    print(f"API key validation failed: {e}")
+```
+
+## Environment Variables
+
+For security best practices, it's recommended to store your API key as an environment variable rather than hardcoding it in your scripts:
+
+```python
+import os
+from runrl import RunRL
+
+# Get API key from environment variable
+api_key = os.environ.get("RUNRL_API_KEY")
+if not api_key:
+    raise ValueError("RUNRL_API_KEY environment variable not set")
+
+client = RunRL(api_key=api_key)
+```
+
+You can set the environment variable in your shell:
+
+```bash
+# Linux/macOS
+export RUNRL_API_KEY="rl-your-api-key"
+
+# Windows (Command Prompt)
+set RUNRL_API_KEY=rl-your-api-key
+
+# Windows (PowerShell)
+$env:RUNRL_API_KEY="rl-your-api-key"
+```
+
+## Custom API Endpoints
+
+By default, the RunRL client connects to the standard RunRL API endpoint. If you need to use a different endpoint (e.g., for testing or private deployments), you can specify it when initializing the client:
+
+```python
+client = RunRL(
+    api_key="rl-your-api-key",
+    base_url="https://custom-api.example.com"
+)
+```
+
+## API Key Security
+
+Keep your API key secure:
+
+- Never commit your API key to version control
+- Don't share your API key in public forums or documentation
+- Rotate your API key periodically
+- Use environment variables or secure secret management tools
+
+## Error Handling
+
+If authentication fails, the RunRL client will raise an `AuthenticationError`:
+
+```python
+from runrl import RunRL, AuthenticationError
+
+try:
+    client = RunRL(api_key="invalid-api-key")
+except AuthenticationError as e:
+    print(f"Authentication failed: {e}")
+```
+
+## Next Steps
+
+Once you've successfully authenticated, you can start using the RunRL client to [manage your runs](/docs/api-reference#runs) and other resources.

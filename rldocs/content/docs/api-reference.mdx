@@ -1,0 +1,368 @@
+---
+title: API Reference
+description: Detailed documentation of the RunRL Python client API
+---
+
+# API Reference
+
+This page provides detailed documentation for all methods available in the RunRL Python client.
+
+## Client Initialization
+
+```python
+from runrl import RunRL
+
+client = RunRL(
+    api_key="rl-your-api-key",
+    base_url="https://runrlusercontent.com"  # Optional, defaults to this URL
+)
+```
+
+### Parameters
+
+- `api_key` (str, required): Your RunRL API key
+- `base_url` (str, optional): The base URL for the RunRL API. Defaults to "https://runrlusercontent.com"
+
+## User Data
+
+### get_user_data()
+
+Retrieves information about the authenticated user.
+
+```python
+user_data = client.get_user_data()
+```
+
+**Returns**: A dictionary containing user information.
+
+## Runs
+
+### list_runs()
+
+Lists all runs for the authenticated user.
+
+```python
+runs = client.list_runs()
+```
+
+**Returns**: A list of dictionaries, each containing information about a run.
+
+### create_run()
+
+Creates a new run with the specified parameters.
+
+```python
+run = client.create_run(
+    model_name="Qwen/Qwen3-4B",
+    prompt_file="file-123",
+    reward_file="file-456",
+    gpu_type="H100",
+    n_gpus=8,
+    lora_rank=0,
+    max_seq_length=1024,
+    epochs=1,
+    learning_rate=5e-6,
+    turbo=True
+)
+```
+
+**Parameters**:
+
+- `model_name` (str, required): The name of the model
+- `prompt_file` (str, required): ID of the uploaded prompt file
+- `reward_file` (str, required): ID of the uploaded reward file
+- `gpu_type` (str, optional): The type of GPU to use. Defaults to "H100"
+- `n_gpus` (int, optional): The number of GPUs. Defaults to 8
+- `lora_rank` (int, optional): The LoRA rank. Defaults to 0
+- `max_seq_length` (int, optional): Maximum sequence length. Defaults to 1024
+- `epochs` (int, optional): Number of training epochs. Defaults to 1
+- `learning_rate` (float, optional): Learning rate. Defaults to 5e-6
+- `adam_beta1` (float, optional): Adam beta1 parameter
+- `adam_beta2` (float, optional): Adam beta2 parameter
+- `weight_decay` (float, optional): Weight decay
+- `warmup_ratio` (float, optional): Warmup ratio
+- `kl_beta` (float, optional): KL beta parameter
+- `hf_token` (str, optional): Hugging Face token
+- `turbo` (bool, optional): Whether to use turbo mode. Defaults to True
+
+**Returns**: A dictionary containing information about the created run.
+
+**Note**: When `turbo=True`, `gpu_type` must be "H100" and `n_gpus` must be 8.
+
+### get_run_details(run_id)
+
+Gets detailed information about a specific run.
+
+```python
+run_details = client.get_run_details("run-123")
+```
+
+**Parameters**:
+- `run_id` (str, required): The ID of the run
+
+**Returns**: A dictionary containing detailed information about the run.
+
+### cancel_run(run_id)
+
+Cancels a running job.
+
+```python
+result = client.cancel_run("run-123")
+```
+
+**Parameters**:
+- `run_id` (str, required): The ID of the run to cancel
+
+**Returns**: A dictionary containing the result of the cancellation.
+
+## Prompt Files
+
+### list_prompt_files()
+
+Lists all prompt files for the authenticated user.
+
+```python
+prompt_files = client.list_prompt_files()
+```
+
+**Returns**: A list of dictionaries, each containing information about a prompt file.
+
+### upload_prompt_file(file_path, friendly_name=None)
+
+Uploads a new prompt file.
+
+```python
+prompt_file = client.upload_prompt_file(
+    file_path="path/to/prompt.jsonl",
+    friendly_name="My Prompt File"  # Optional
+)
+```
+
+**Parameters**:
+- `file_path` (str, required): Path to the file to upload
+- `friendly_name` (str, optional): A user-friendly name for the file
+
+**Returns**: A dictionary containing information about the uploaded file.
+
+### delete_prompt_file(file_id)
+
+Deletes a prompt file.
+
+```python
+result = client.delete_prompt_file("file-123")
+```
+
+**Parameters**:
+- `file_id` (str, required): The ID of the file to delete
+
+**Returns**: A dictionary containing the result of the deletion.
+
+### get_prompt_file_preview(file_id)
+
+Gets a preview of a prompt file.
+
+```python
+preview = client.get_prompt_file_preview("file-123")
+```
+
+**Parameters**:
+- `file_id` (str, required): The ID of the file to preview
+
+**Returns**: A dictionary containing the file preview.
+
+## Reward Files
+
+### list_reward_files()
+
+Lists all reward files for the authenticated user.
+
+```python
+reward_files = client.list_reward_files()
+```
+
+**Returns**: A list of dictionaries, each containing information about a reward file.
+
+### upload_reward_file(file_path, friendly_name=None)
+
+Uploads a new reward file.
+
+```python
+reward_file = client.upload_reward_file(
+    file_path="path/to/reward.jsonl",
+    friendly_name="My Reward File"  # Optional
+)
+```
+
+**Parameters**:
+- `file_path` (str, required): Path to the file to upload
+- `friendly_name` (str, optional): A user-friendly name for the file
+
+**Returns**: A dictionary containing information about the uploaded file.
+
+### delete_reward_file(file_id)
+
+Deletes a reward file.
+
+```python
+result = client.delete_reward_file("file-123")
+```
+
+**Parameters**:
+- `file_id` (str, required): The ID of the file to delete
+
+**Returns**: A dictionary containing the result of the deletion.
+
+### get_reward_file_content(file_id)
+
+Gets the content of a reward file.
+
+```python
+content = client.get_reward_file_content("file-123")
+```
+
+**Parameters**:
+- `file_id` (str, required): The ID of the file to get content for
+
+**Returns**: A dictionary containing the file content.
+
+## Models & Deployments
+
+### download_model(job_name, output_path)
+
+Downloads a trained model.
+
+```python
+client.download_model(
+    job_name="my-model",
+    output_path="path/to/save/model.tar.gz"
+)
+```
+
+**Parameters**:
+- `job_name` (str, required): The name of the job/model to download
+- `output_path` (str, required): The path where the model should be saved
+
+**Returns**: None. Prints a success message when the download is complete.
+
+### list_deployments(job_name)
+
+Lists all deployments for a specific job/model.
+
+```python
+deployments = client.list_deployments("my-model")
+```
+
+**Parameters**:
+- `job_name` (str, required): The name of the job/model
+
+**Returns**: A list of dictionaries, each containing information about a deployment.
+
+### deploy_model(job_name)
+
+Deploys a trained model.
+
+```python
+result = client.deploy_model("my-model")
+```
+
+**Parameters**:
+- `job_name` (str, required): The name of the job/model to deploy
+
+**Returns**: A dictionary containing information about the deployment.
+
+## Metrics & Logs
+
+### get_stored_metrics(run_id)
+
+Gets stored metrics for a specific run.
+
+```python
+metrics = client.get_stored_metrics("run-123")
+```
+
+**Parameters**:
+- `run_id` (str, required): The ID of the run
+
+**Returns**: A dictionary containing metrics for the run.
+
+### get_stored_logs(run_id, max_lines=2000)
+
+Gets stored logs for a specific run.
+
+```python
+logs = client.get_stored_logs(
+    run_id="run-123",
+    max_lines=2000  # Optional, defaults to 2000
+)
+```
+
+**Parameters**:
+- `run_id` (str, required): The ID of the run
+- `max_lines` (int, optional): Maximum number of log lines to retrieve. Defaults to 2000
+
+**Returns**: A dictionary containing logs for the run.
+
+### stream_logs(run_id, follow=True)
+
+Streams logs for a specific run in real-time.
+
+```python
+# This returns an async generator, so you need to use it in an async context
+async for log_entry in client.stream_logs("run-123", follow=True):
+    print(log_entry)
+```
+
+**Parameters**:
+- `run_id` (str, required): The ID of the run
+- `follow` (bool, optional): Whether to continue streaming new logs as they arrive. Defaults to True
+
+**Returns**: An async generator that yields log entries as dictionaries.
+
+## GPU Prices
+
+### get_gpu_price(gpu_type)
+
+Gets the price for a specific GPU type.
+
+```python
+price = client.get_gpu_price("H100")
+```
+
+**Parameters**:
+- `gpu_type` (str, required): The type of GPU
+
+**Returns**: A dictionary containing pricing information.
+
+### get_all_gpu_prices()
+
+Gets prices for all available GPU types.
+
+```python
+prices = client.get_all_gpu_prices()
+```
+
+**Returns**: A list of dictionaries, each containing pricing information for a GPU type.
+
+## Error Handling
+
+The RunRL client defines several exception classes for handling different types of errors:
+
+```python
+from runrl import (
+    RunRLError,           # Base exception class
+    AuthenticationError,  # Authentication failed
+    PermissionError,      # Permission denied
+    NotFoundError,        # Resource not found
+    APIServerError,       # Server error
+    RequestError          # Client request error
+)
+
+try:
+    # RunRL API call
+    client.get_run_details("non-existent-run")
+except NotFoundError as e:
+    print(f"Run not found: {e}")
+except AuthenticationError as e:
+    print(f"Authentication failed: {e}")
+except RunRLError as e:
+    print(f"General error: {e}")

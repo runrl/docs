@@ -1,0 +1,362 @@
+---
+title: Usage Examples
+description: Practical examples of using the RunRL Python client
+---
+
+# Usage Examples
+
+This page provides practical examples of using the RunRL Python client for common tasks.
+
+## Basic Setup
+
+First, import the RunRL client and initialize it with your API key:
+
+```python
+from runrl import RunRL
+
+# Initialize with your API key
+client = RunRL(api_key="rl-your-api-key")
+```
+
+## Managing Prompt Files
+
+### Uploading a Prompt File
+
+```python
+# Upload a prompt file with a friendly name
+prompt_file = client.upload_prompt_file(
+    file_path="path/to/prompt.jsonl",
+    friendly_name="My Prompt File"
+)
+
+# Print the file ID for later use
+print(f"Uploaded prompt file with ID: {prompt_file['id']}")
+```
+
+### Listing Prompt Files
+
+```python
+# List all prompt files
+prompt_files = client.list_prompt_files()
+
+# Print information about each file
+for file in prompt_files:
+    print(f"ID: {file['id']}, Name: {file['friendly_name']}, Size: {file['size']} bytes")
+```
+
+### Getting a Prompt File Preview
+
+```python
+# Get a preview of a prompt file
+preview = client.get_prompt_file_preview("file-123")
+
+# Print the preview content
+print(preview['content'])
+```
+
+## Managing Reward Files
+
+### Uploading a Reward File
+
+```python
+# Upload a reward file with a friendly name
+reward_file = client.upload_reward_file(
+    file_path="path/to/reward.jsonl",
+    friendly_name="My Reward File"
+)
+
+# Print the file ID for later use
+print(f"Uploaded reward file with ID: {reward_file['id']}")
+```
+
+### Listing Reward Files
+
+```python
+# List all reward files
+reward_files = client.list_reward_files()
+
+# Print information about each file
+for file in reward_files:
+    print(f"ID: {file['id']}, Name: {file['friendly_name']}, Size: {file['size']} bytes")
+```
+
+## Creating and Managing Runs
+
+### Creating a Run
+
+```python
+# Create a new run
+run = client.create_run(
+    model_name="Qwen/Qwen3-4B",
+    prompt_file="file-123",  # ID of your prompt file
+    reward_file="file-456",  # ID of your reward file
+    epochs=3,
+    learning_rate=1e-5
+)
+
+# Print the run ID for later use
+print(f"Created run with ID: {run['id']}")
+```
+
+### Listing Runs
+
+```python
+# List all runs
+runs = client.list_runs()
+
+# Print information about each run
+for run in runs:
+    print(f"ID: {run['id']}, Status: {run['status']}, Model: {run['model_name']}")
+```
+
+### Getting Run Details
+
+```python
+# Get details for a specific run
+run_details = client.get_run_details("run-123")
+
+# Print detailed information
+print(f"Run ID: {run_details['id']}")
+print(f"Status: {run_details['status']}")
+print(f"Created At: {run_details['created_at']}")
+print(f"Model: {run_details['model_name']}")
+```
+
+### Canceling a Run
+
+```python
+# Cancel a run
+result = client.cancel_run("run-123")
+
+# Print the result
+print(f"Cancellation result: {result}")
+```
+
+## Monitoring Training Progress
+
+### Getting Stored Metrics
+
+```python
+# Get metrics for a run
+metrics = client.get_stored_metrics("run-123")
+
+# Print or plot the metrics
+import matplotlib.pyplot as plt
+
+# Example: Plot loss over time
+if 'loss' in metrics:
+    plt.figure(figsize=(10, 6))
+    plt.plot(metrics['loss'])
+    plt.title('Training Loss')
+    plt.xlabel('Step')
+    plt.ylabel('Loss')
+    plt.grid(True)
+    plt.show()
+```
+
+### Getting Stored Logs
+
+```python
+# Get logs for a run
+logs = client.get_stored_logs("run-123", max_lines=100)
+
+# Print the logs
+for log in logs.get('logs', []):
+    print(f"[{log['timestamp']}] {log['message']}")
+```
+
+### Streaming Logs in Real-time
+
+```python
+import asyncio
+
+async def stream_logs_example():
+    # Stream logs for a run
+    async for log_entry in client.stream_logs("run-123", follow=True):
+        print(f"[{log_entry['timestamp']}] {log_entry['message']}")
+
+# Run the async function
+asyncio.run(stream_logs_example())
+```
+
+## Working with Models
+
+### Downloading a Trained Model
+
+```python
+# Download a trained model
+client.download_model(
+    job_name="my-model",
+    output_path="path/to/save/model.tar.gz"
+)
+```
+
+### Deploying a Model
+
+```python
+# Deploy a trained model
+deployment = client.deploy_model("my-model")
+
+# Print deployment information
+print(f"Deployment ID: {deployment['id']}")
+print(f"Status: {deployment['status']}")
+print(f"Endpoint: {deployment['endpoint']}")
+```
+
+### Listing Deployments
+
+```python
+# List deployments for a model
+deployments = client.list_deployments("my-model")
+
+# Print information about each deployment
+for deployment in deployments:
+    print(f"ID: {deployment['id']}, Status: {deployment['status']}")
+```
+
+## GPU Pricing
+
+### Getting All GPU Prices
+
+```python
+# Get prices for all GPU types
+prices = client.get_all_gpu_prices()
+
+# Print pricing information
+for price in prices:
+    print(f"GPU Type: {price['gpu_type']}, Price: ${price['price_per_hour']} per hour")
+```
+
+### Getting Price for a Specific GPU Type
+
+```python
+# Get price for a specific GPU type
+price = client.get_gpu_price("H100")
+
+# Print pricing information
+print(f"H100 Price: ${price['price_per_hour']} per hour")
+```
+
+## Complete Training Workflow
+
+Here's a complete example that demonstrates a typical workflow from uploading files to creating a run and monitoring progress:
+
+```python
+import os
+import time
+from runrl import RunRL
+
+# Initialize the client
+api_key = os.environ.get("RUNRL_API_KEY")
+client = RunRL(api_key=api_key)
+
+# Upload prompt and reward files
+prompt_file = client.upload_prompt_file(
+    file_path="data/prompt.jsonl",
+    friendly_name="Example Prompt File"
+)
+print(f"Uploaded prompt file with ID: {prompt_file['id']}")
+
+reward_file = client.upload_reward_file(
+    file_path="data/reward.jsonl",
+    friendly_name="Example Reward File"
+)
+print(f"Uploaded reward file with ID: {reward_file['id']}")
+
+# Create a run
+run = client.create_run(
+    model_name="Qwen/Qwen3-4B",
+    prompt_file=prompt_file['id'],
+    reward_file=reward_file['id'],
+    epochs=2,
+    learning_rate=2e-6
+)
+print(f"Created run with ID: {run['id']}")
+
+# Monitor the run status
+while True:
+    run_details = client.get_run_details(run['id'])
+    status = run_details['status']
+    print(f"Run status: {status}")
+    
+    if status in ['completed', 'failed', 'canceled']:
+        break
+    
+    time.sleep(60)  # Check every minute
+
+# If the run completed successfully, download the model
+if run_details['status'] == 'completed':
+    client.download_model(
+        job_name=run_details['job_name'],
+        output_path=f"models/{run_details['job_name']}.tar.gz"
+    )
+    print(f"Downloaded model to models/{run_details['job_name']}.tar.gz")
+```
+
+## Error Handling Examples
+
+### Handling Authentication Errors
+
+```python
+from runrl import RunRL, AuthenticationError
+
+try:
+    client = RunRL(api_key="invalid-api-key")
+except AuthenticationError as e:
+    print(f"Authentication failed: {e}")
+    # Handle authentication failure (e.g., prompt for a new API key)
+```
+
+### Handling Resource Not Found Errors
+
+```python
+from runrl import RunRL, NotFoundError
+
+client = RunRL(api_key="rl-your-api-key")
+
+try:
+    run_details = client.get_run_details("non-existent-run")
+except NotFoundError as e:
+    print(f"Run not found: {e}")
+    # Handle the error (e.g., prompt for a valid run ID)
+```
+
+### Comprehensive Error Handling
+
+```python
+from runrl import (
+    RunRL,
+    RunRLError,
+    AuthenticationError,
+    PermissionError,
+    NotFoundError,
+    APIServerError,
+    RequestError
+)
+
+client = RunRL(api_key="rl-your-api-key")
+
+try:
+    # Attempt to perform an operation
+    result = client.get_run_details("run-123")
+except AuthenticationError as e:
+    print(f"Authentication failed: {e}")
+    # Handle authentication issues
+except PermissionError as e:
+    print(f"Permission denied: {e}")
+    # Handle permission issues
+except NotFoundError as e:
+    print(f"Resource not found: {e}")
+    # Handle not found issues
+except APIServerError as e:
+    print(f"Server error: {e}")
+    # Handle server errors
+except RequestError as e:
+    print(f"Request error: {e}")
+    # Handle client request errors
+except RunRLError as e:
+    print(f"General error: {e}")
+    # Handle other RunRL errors
+except Exception as e:
+    print(f"Unexpected error: {e}")
+    # Handle unexpected errors
