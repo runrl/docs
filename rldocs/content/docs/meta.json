@@ -4,9 +4,10 @@
     "index",
     "installation",
     "authentication",
-    "file-formats",
+    "file-formats", 
     "examples",
     "api-reference",
+    "rest-api",
     "troubleshooting"
   ]
 }
