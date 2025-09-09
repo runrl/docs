@@ -1,106 +1,172 @@
 ---
-title: Authentication
-description: How to authenticate with the RunRL API
+title: Creating Your First Run
+description: Complete walkthrough for launching your first training run on Motte.ai
 ---
 
-# Authentication
+# Creating Your First Run
 
-The RunRL client uses API key authentication to securely access the RunRL API. This page explains how to obtain and use your API key.
+Step-by-step guide for launching your first successful reinforcement learning training run.
 
-## Obtaining an API Key
+## Before You Start
 
-To obtain an API key:
+Ensure you have completed [account setup](/docs/installation) including:
 
-1. Sign up for an account at [RunRL](https://runrl.com)
-2. Navigate to your account settings
-3. Generate a new API key
-4. Copy the API key (it starts with `rl-`)
+- ✅ Email verification
+- ✅ Billing information added
+- ✅ Understanding of $80/hour cost
 
-## Using Your API Key
+## Step 1: Prepare Your Training Data
 
-When initializing the RunRL client, you need to provide your API key:
+### Prompt File Format
+
+Create a JSONL file with training examples:
+
+```json
+{"messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What is 2+2?"}], "expected_result": "4"}
+{"messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "Explain gravity"}], "expected_result": "A fundamental force"}
+```
+
+### Simple Reward Function
+
+Start with this basic reward function:
 
 ```python
-from runrl import RunRL
-
-# Initialize with your API key
-client = RunRL(api_key="rl-your-api-key")
+def reward_fn(prompt, response, expected_result=None):
+    """Basic reward function for testing"""
+    
+    # Too short responses get no reward
+    if len(response.strip()) < 10:
+        return 0.0
+        
+    # Too long responses get penalty  
+    if len(response.strip()) > 500:
+        return 0.3
+        
+    # Check if expected content is present
+    if expected_result and expected_result.lower() in response.lower():
+        return 1.0
+        
+    # Default reasonable score
+    return 0.6
 ```
 
-## API Key Validation
+## Step 2: Navigate to Create Run
 
-The RunRL client automatically validates your API key when you initialize it:
+1. **Go to [Create Run](https://motte.ai/runs/create)**
+2. **Note the $80/hr cost display** next to the launch button
+3. **Choose your model** from the curated list
 
-```python
-try:
-    client = RunRL(api_key="rl-your-api-key")
-    print("API key is valid!")
-except Exception as e:
-    print(f"API key validation failed: {e}")
-```
+## Step 3: Upload Your Files
 
-## Environment Variables
+### Upload Prompts
+1. **Drag and drop** your JSONL file into the upload area
+2. **Wait for upload completion** and validation
+3. **Review preview** to ensure format is correct
 
-For security best practices, it's recommended to store your API key as an environment variable rather than hardcoding it in your scripts:
+### Create Reward Function
+1. **Select "Reward Function" mode**
+2. **Paste your reward function code** into the editor
+3. **Test with sample data** if available
 
-```python
-import os
-from runrl import RunRL
+## Step 4: Configure Training Settings
 
-# Get API key from environment variable
-api_key = os.environ.get("RUNRL_API_KEY")
-if not api_key:
-    raise ValueError("RUNRL_API_KEY environment variable not set")
+### Recommended First Run Settings
+- **Completion Length**: 256 tokens (balance cost vs quality)
+- **Epochs**: 1 (start conservatively)
+- **Learning Rate Multiplier**: 1.0 (default setting)
 
-client = RunRL(api_key=api_key)
-```
+### Skip Advanced Options
+- **Tools**: Leave unchecked for first run
+- **HuggingFace Token**: Only needed for gated models
 
-You can set the environment variable in your shell:
+## Step 5: Launch and Monitor
 
-```bash
-# Linux/macOS
-export RUNRL_API_KEY="rl-your-api-key"
+### Starting the Run
+1. **Review all settings** one final time
+2. **Click "Start Reinforcement Learning"**
+3. **Note the cost reminder** ($80/hr)
+4. **Automatically redirected** to run detail page
 
-# Windows (Command Prompt)
-set RUNRL_API_KEY=rl-your-api-key
+### Monitoring Progress
 
-# Windows (PowerShell)
-$env:RUNRL_API_KEY="rl-your-api-key"
-```
+**Watch for status changes**:
+- `PENDING` → Run queued for provisioning
+- `PROVISIONING` → GPU instance being allocated  
+- `SETTING_UP` → Environment being prepared
+- `READY` → About to start training
+- `RUNNING` → 💸 **Billing active** - $80/hour
 
-## Custom API Endpoints
+**Key metrics to monitor**:
+- **Reward curves** - Should trend upward
+- **Policy loss** - Should decrease over time  
+- **KL divergence** - Should stay reasonable
+- **Cost accumulation** - Track spending in real-time
 
-By default, the RunRL client connects to the standard RunRL API endpoint. If you need to use a different endpoint (e.g., for testing or private deployments), you can specify it when initializing the client:
+## Step 6: Understanding Your Results
 
-```python
-client = RunRL(
-    api_key="rl-your-api-key",
-    base_url="https://custom-api.example.com"
-)
-```
+### Successful Training Indicators
+- **Reward improvement** - Final > initial rewards
+- **Stable metrics** - Charts show clear trends
+- **No errors** - Terminal logs are clean
+- **Cost efficiency** - Reasonable cost per improvement
 
-## API Key Security
+### When to Cancel
+Cancel your run if:
+- **No improvement** after 30+ minutes
+- **Costs exceed budget** for your experiment  
+- **Error messages** appear in terminal
+- **Metrics plateau early** with no progress
 
-Keep your API key secure:
+## Step 7: Post-Run Analysis
 
-- Never commit your API key to version control
-- Don't share your API key in public forums or documentation
-- Rotate your API key periodically
-- Use environment variables or secure secret management tools
+After completion or cancellation:
 
-## Error Handling
+1. **Review final metrics** in Weights & Biases
+2. **Analyze cost efficiency** - improvement per dollar
+3. **Document learnings** - what worked, what didn't
+4. **Plan next iteration** - adjustments for next run
 
-If authentication fails, the RunRL client will raise an `AuthenticationError`:
+## Success Checklist
 
-```python
-from runrl import RunRL, AuthenticationError
+Your first run was successful if:
 
-try:
-    client = RunRL(api_key="invalid-api-key")
-except AuthenticationError as e:
-    print(f"Authentication failed: {e}")
-```
+- [ ] **Completed without errors** or achieved target metrics
+- [ ] **Cost stayed within budget** expectations
+- [ ] **Metrics showed improvement** from baseline
+- [ ] **You understand** the training process flow
+
+## Common First-Run Issues
+
+### Run Stuck in "PENDING"
+**Cause**: High demand or billing issues  
+**Solution**: Check billing setup, wait, or contact support
+
+### No Metrics Appearing  
+**Cause**: W&B integration not working
+**Solution**: Refresh page, check for errors in terminal
+
+### Reward Function Errors
+**Cause**: Syntax errors or wrong function signature
+**Solution**: Check function name is `reward_fn` with correct parameters
+
+### High Costs, No Improvement
+**Cause**: Poor reward function or difficult task
+**Solution**: Simplify reward logic, reduce complexity
 
 ## Next Steps
 
-Once you've successfully authenticated, you can start using the RunRL client to [manage your runs](/docs/api-reference#runs) and other resources.
+After your first successful run:
+
+1. **Experiment with different models** and see performance differences
+2. **Try more complex reward functions** for nuanced training
+3. **Scale up with larger datasets** and longer training
+4. **Read [Examples](/docs/examples)** for advanced techniques
+
+## Need Help?
+
+- **Search the docs** using Cmd/Ctrl+K
+- **Check [Troubleshooting](/docs/troubleshooting)** for common issues  
+- **Review [Examples](/docs/examples)** for working templates
+- **Monitor [Dashboard](https://motte.ai/dashboard)** for system status
+
+Ready to create your first run? [Launch now!](https://motte.ai/runs/create)

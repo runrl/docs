@@ -1,85 +1,104 @@
 ---
-title: Installation
-description: How to install the RunRL Python client
+title: Getting Started
+description: How to set up your Motte.ai account and prepare for training
 ---
 
-# Installation
+# Getting Started
 
-The RunRL Python client can be easily installed using pip or uv, Python package managers.
+Get your Motte.ai account ready for reinforcement learning training runs.
 
-## Requirements
+## Account Setup
 
-- Python 3.7 or higher
-- pip or uv (Python package managers)
+### 1. Sign Up & Verification
 
-## Installing from PyPI
+1. **Visit [Motte.ai](https://motte.ai)** and click "Sign Up"
+2. **Enter your email and password**
+3. **Check your email** for verification link
+4. **Click the verification link** to activate your account
 
-The recommended way to install RunRL is via pip or uv:
+### 2. Billing Configuration
 
-```bash
-# Using pip
-pip install runrl
+**Important**: Training runs cost **$80/hour** while active.
 
-# Using uv
-uv pip install runrl
-```
+1. **Navigate to [Settings > Billing](https://motte.ai/settings/billing)**
+2. **Add your payment method** (credit card required)
+3. **Review usage limits** and billing preferences
+4. **Set spending alerts** if desired
 
-This will install the latest stable version (0.1.15) of the RunRL client library and all its dependencies.
+### 3. System Requirements
 
-## Installing a Specific Version
+#### Browser Compatibility
+- **Chrome/Edge**: Recommended (best performance)
+- **Firefox**: Fully supported
+- **Safari**: Supported with minor limitations
+- **Mobile browsers**: Basic functionality available
 
-If you need to install a specific version of RunRL:
+#### File Preparation
+- **Prompts**: JSONL format with message objects
+- **Reward Functions**: Python files with `reward_fn()` function
+- **File sizes**: Up to 50MB per upload
 
-```bash
-# Using pip
-pip install runrl==0.1.15  # Or another specific version
+## First-Time Setup Checklist
 
-# Using uv
-uv pip install runrl==0.1.15  # Or another specific version
-```
+Before creating your first run:
 
-## Upgrading
+- [ ] **Email verified** and account activated
+- [ ] **Billing information** added and validated
+- [ ] **Understanding of costs** - $80/hour for active runs
+- [ ] **Prompt file prepared** in correct JSONL format
+- [ ] **Reward function written** or environment class defined
 
-To upgrade to the latest version:
+## Understanding Costs
 
-```bash
-# Using pip
-pip install --upgrade runrl
+### Billing Model
+- **$80 per hour** per active training run
+- **Billing starts** when run status changes to "RUNNING"
+- **Billing stops** when run completes, fails, or is cancelled
+- **Minimum charge**: Rounded to nearest minute
 
-# Using uv
-uv pip install --upgrade runrl
-```
+### Cost Management Tips
+1. **Start small** - Test with 1 epoch and short completion lengths
+2. **Monitor actively** - Check progress every 15-30 minutes
+3. **Cancel if needed** - Don't hesitate to stop unprofitable runs
+4. **Use dashboard** - Track real-time costs across all runs
 
-## Installing from Source
+## Test Your Setup
 
-For development purposes, you can install RunRL directly from the source code:
+### Create a Test Run
+1. **Prepare minimal data** - 5-10 sample prompts
+2. **Use simple reward function** - Basic length or keyword checking
+3. **Set minimal settings** - 1 epoch, 128 completion length
+4. **Monitor for 10 minutes** - Verify metrics are flowing
+5. **Cancel test run** - Practice cost control
 
-```bash
-git clone https://github.com/runrl/runrl.git
-cd runrl
-# Using pip
-pip install -e .
-# Using uv
-uv pip install -e .
-```
+### Expected Costs
+- **10-minute test**: ~$13-15
+- **1-hour experiment**: $80
+- **Full training run**: $160-400 depending on duration
 
-## Verifying Installation
+## Common Setup Issues
 
-You can verify that RunRL is installed correctly by importing it in Python:
+### "Billing not configured"
+**Solution**: Add payment method in Settings > Billing
 
-```python
-import runrl
-print(runrl.__version__)  # Should print the installed version
-```
+### "File upload failed"
+**Solution**: 
+- Check file format (JSONL for prompts)
+- Verify file size under 50MB
+- Ensure valid JSON on each line
 
-## Dependencies
-
-RunRL depends on the following Python packages, which will be automatically installed:
-
-- `requests`: For making HTTP requests to the RunRL API
-- `websockets`: For streaming logs via WebSockets
-- `asyncio`: For asynchronous operations
+### "Model not found"
+**Solution**:
+- Check model name spelling
+- Ensure model exists on HuggingFace
+- Try popular models like "meta-llama/Llama-2-7b-chat-hf"
 
 ## Next Steps
 
-After installation, you'll need to [authenticate](/docs/authentication) with your API key to start using RunRL.
+Once your account is set up:
+
+1. **Read [Creating Your First Run](/docs/authentication)** for step-by-step guidance
+2. **Review [File Formats](/docs/file-formats)** to prepare your data
+3. **Check [Examples](/docs/examples)** for inspiration and templates
+
+Ready to start training? [Create your first run now!](https://motte.ai/runs/create)

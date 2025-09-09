@@ -1,12 +1,12 @@
 {
-  "title": "RunRL Documentation",
+  "title": "Motte.ai Documentation",
   "pages": [
     "index",
     "installation",
     "authentication",
-    "api-reference",
     "file-formats",
     "examples",
+    "api-reference",
     "troubleshooting"
   ]
 }

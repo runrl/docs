@@ -1,71 +1,72 @@
 ---
-title: RunRL Documentation
-description: Python client for interacting with the RunRL API
+title: Motte.ai Documentation
+description: Complete guide to using Motte.ai for reinforcement learning training
 ---
 
-# RunRL
+# Motte.ai Documentation
 
-RunRL is a Python client library for interacting with the RunRL API, which provides tools for training and deploying machine learning models.
+Motte.ai is a powerful web platform for training language models using reinforcement learning from human feedback (RLHF). Train models, monitor metrics in real-time, and optimize costs efficiently.
 
 ## Overview
 
-The RunRL client library provides a simple and intuitive interface for:
+The Motte.ai platform provides:
 
-- Managing training runs
-- Uploading and managing prompt and reward files
-- Downloading and deploying trained models
-- Monitoring training metrics and logs
-- Accessing GPU pricing information
+- **Web-based interface** - No installation required, works in any browser
+- **Real-time training metrics** - Live charts powered by Weights & Biases
+- **Cost transparency** - Clear $80/hour pricing with real-time tracking
+- **Model fine-tuning** - Support for popular models (Llama, Qwen, Gemma)
+- **Advanced monitoring** - Terminal streaming, progress tracking, and alerts
 
 ## Getting Started
 
 <Cards>
-  <Card title="Installation" href="/docs/installation" />
-  <Card title="Authentication" href="/docs/authentication" />
-  <Card title="API Reference" href="/docs/api-reference" />
+  <Card title="Account Setup" href="/docs/installation" />
+  <Card title="Creating Your First Run" href="/docs/authentication" />
+  <Card title="Web Interface Guide" href="/docs/api-reference" />
   <Card title="File Formats" href="/docs/file-formats" />
-  <Card title="Examples" href="/docs/examples" />
+  <Card title="Complete Examples" href="/docs/examples" />
 </Cards>
 
 ## Quick Start
 
-```python
-from runrl import RunRL
+1. **Sign up** at [Motte.ai](https://motte.ai) and verify your email
+2. **Add billing information** to enable $80/hour GPU training
+3. **Navigate to [Create Run](https://motte.ai/runs/create)**
+4. **Upload your prompts** (JSONL format) via drag-and-drop
+5. **Define reward function** or upload existing Python file
+6. **Configure settings** (completion length, epochs, learning rate)
+7. **Launch training** and monitor real-time metrics
+8. **Track costs** and cancel anytime via the dashboard
 
-# Initialize the client with your API key
-client = RunRL(api_key="rl-your-api-key")
+## Key Features
 
-# List your runs
-runs = client.list_runs()
-print(f"You have {len(runs)} runs")
+### 💰 **Cost Management**
+- Transparent $80/hour pricing
+- Real-time cost tracking
+- One-click cancellation
+- Dashboard cost monitoring
 
-# Upload prompt and reward files
-prompt_file = client.upload_prompt_file("path/to/prompt.jsonl", "My Prompt File")
-print(f"Uploaded prompt file with ID: {prompt_file['id']}")
+### 📊 **Real-Time Monitoring**
+- Live training metrics with Chart.js
+- Weights & Biases integration
+- Terminal log streaming
+- Progress indicators
 
-reward_file = client.upload_reward_file("path/to/reward.jsonl", "My Reward File")
-print(f"Uploaded reward file with ID: {reward_file['id']}")
+### 🚀 **Easy Training**
+- Drag-and-drop file upload
+- Pre-configured model selection
+- Visual reward function editor
+- Automated infrastructure management
 
-# Launch a training run
-run = client.create_run(
-    model_name="Qwen/Qwen3-4B",
-    prompt_file=prompt_file['id'],
-    reward_file=reward_file['id'],
-    epochs=2,
-    learning_rate=2e-6
-)
-print(f"Created run with ID: {run['id']}")
+### 📱 **Web Interface**
+- No installation required
+- Responsive design for mobile/desktop
+- Integrated search (Cmd/Ctrl+K)
+- Dark/light mode support
 
-# Check run status
-run_details = client.get_run_details(run['id'])
-print(f"Run status: {run_details['status']}")
-```
+## Supported Models
 
-## Features
-
-- **Authentication** - Secure API key authentication
-- **Run Management** - Create, list, and monitor training runs
-- **File Management** - Upload and manage prompt and reward files
-- **Model Deployment** - Download and deploy trained models
-- **Metrics & Logs** - Access training metrics and logs
-- **GPU Pricing** - Get information about GPU pricing
+- **Llama 2 & 3** variants
+- **Qwen** models  
+- **Gemma** family
+- **Custom HuggingFace** models
