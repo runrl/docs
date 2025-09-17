@@ -1,15 +1,15 @@
 ---
 title: File Formats
-description: Detailed guide on how to format prompt files and reward functions for RunRL
+description: Guide on how to format input files for RunRL
 ---
 
 # File Formats
 
-This guide explains how to properly format prompt files and reward functions for use with RunRL.
+This guide explains the file formats used by RunRL for training reinforcement learning models.
 
 ## Prompt Files
 
-Prompt files contain the examples that your model will learn from during training. They define the inputs that will be sent to the model and the expected outputs.
+Prompt files contain the examples that your model will learn from during training. They define the inputs that will be sent to the model.
 
 ### Format Requirements
 
@@ -20,12 +20,16 @@ Prompt files must be in JSONL (JSON Lines) format, with each line containing a c
 Each line in your prompt file must include:
 
 - `prompt`: An array of message objects, where each message has:
-  - `role`: The role of the speaker (e.g., "system", "user")
+  - `role`: The role of the speaker (e.g., "system", "user", "assistant")
   - `content`: The actual message text
 
 ### Additional Fields
 
-You can include additional fields that your reward function might need, such as `expected_result` for evaluating correctness.
+You can include additional fields that your reward function might need for evaluation. Common examples include:
+- `expected_result`: The expected answer or output
+- `difficulty`: A difficulty level indicator
+- `category`: A categorization tag
+- Any custom metadata your reward function requires
 
 ### Example Prompt File
 
@@ -35,94 +39,73 @@ You can include additional fields that your reward function might need, such as 
 {"prompt":[{"role":"system","content":"You are an expert at mathematics."},{"role":"user","content":"What is the value of this expression: { (194 + 92 + 120) + 26 - 22 }? Think for as long as you want, and then give your answer inside of <answer></answer> XML tags."}],"expected_result":410}
 ```
 
-### Important Notes
+### Best Practices
 
 - Each line must be a complete, valid JSON object
-- No trailing commas are allowed
-- The file should contain a wide distribution of prompts that your model may potentially encounter
-- Generally, aim to have at least 100 distinct examples, but this depends on your specific task
+- No trailing commas are allowed between lines
+- Include a diverse distribution of prompts that represent your use case
+- Generally, aim for at least 100 distinct examples for effective training
+- Consider including difficulty levels or categories if your task has natural groupings
+- Test your JSONL file with a JSON validator to ensure proper formatting
 
 ## Reward Functions
 
-Reward functions evaluate the model's responses and provide feedback signals that guide the learning process.
+Reward functions evaluate the model's responses and provide feedback signals that guide the learning process. They determine how well the model is performing on your task.
 
-### Format Requirements
+### Core Concepts
 
-Reward functions must be Python scripts (`.py` files) that define a specific function called `reward_func`.
+A reward function:
+- Receives the model's completion/response
+- Evaluates the quality of that response
+- Returns a numerical reward score
+- Can access additional data from the prompt file (like expected answers)
 
-### Function Signature
+### Reward Design Principles
 
-```python
-def reward_func(prompts, completions, **kwargs) -> list[float]:
-    # Your reward logic here
-    return rewards
-```
+- **Varied Scores**: Ensure your reward function produces a range of values. If all responses get the same reward, the model cannot learn to distinguish good from bad.
+- **Clear Signal**: Higher rewards should consistently indicate better performance
+- **Balanced Feedback**: Consider both rewarding desired behaviors and penalizing undesired ones
+- **Robust Evaluation**: Handle edge cases and unexpected inputs gracefully
 
-### Parameters
+### Implementation Languages
 
-- `prompts`: A list of the prompts that were sent to the model. Each item corresponds to a prompt object from your JSONL file.
-- `completions`: A list of completions from the model. Each completion is typically a list itself, where the first element contains the model's response. Access the generated text using `completion[0]['content']` for each completion.
-- `**kwargs`: Additional data from your prompt JSONL file entries (like `expected_result`) can be accessed using `kwargs.get('your_key_name')`.
+For language-specific implementation details, see:
+- [Python Implementation Guide](/docs/python/file-formats#reward-functions)
 
-### Return Value
+## Environment Classes
 
-The function must return a `list[float]`, where each float is the reward score for the corresponding completion.
+Environment classes create interactive scenarios where the model's actions affect the state and receive feedback through observations and rewards. They're useful for sequential decision-making tasks.
 
-### Example Reward Function
+### Core Concepts
 
-This example reward function evaluates math problems, rewarding correct answers and penalizing the use of numerals in the thinking process:
+An environment:
+- Maintains internal state across interactions
+- Receives actions from the model
+- Returns observations, rewards, and termination signals
+- Resets between episodes
 
-```python
-def extract_answer(str):
-    # Extracts answer from between <answer> tags
-    if "<answer>" in str and "</answer>" in str:
-        return str.split("<answer>")[1].split("</answer>")[0]
-    else:
-        return ""
+### Key Components
 
-def response_penalty(str):
-    # Penalizes use of digits in the response
-    return sum(1 for c in str if c.isdigit())
+1. **Initialization**: Sets up the initial state for each episode
+2. **Step Function**: Processes actions and returns feedback
+3. **Termination Logic**: Determines when an episode ends
+4. **Reward Structure**: Provides appropriate feedback for learning
 
-def reward_func(prompts, completions, **kwargs):
-    # Get expected result from kwargs
-    expected_result = kwargs.get('expected_result')
-    if expected_result is None:
-        raise ValueError("expected_result is required for this reward function")
-    
-    # Get model responses from completions
-    model_responses = [completion[0]['content'] 
-                      for completion in completions]
-    
-    # Extract answers from responses
-    extracted_answers = [extract_answer(r) 
-                        for r in model_responses]
-    
-    # Calculate correctness rewards (10.0 for correct, 0.0 for incorrect)
-    response_correctness_rewards = [
-        10.0 if extracted_answer == expected_result else 0.0 
-        for extracted_answer in extracted_answers
-    ]
-    
-    # Calculate penalties for using digits
-    response_penalty_rewards = [
-        -response_penalty(model_response) 
-        for model_response in model_responses
-    ]
-    
-    # Combine rewards and penalties
-    rewards = [r + p for r, p in zip(
-        response_correctness_rewards, 
-        response_penalty_rewards
-    )]
-    
-    return rewards
-```
+### Implementation Languages
 
-### Best Practices
+For language-specific implementation details, see:
+- [Python Implementation Guide](/docs/python/file-formats#environment-classes)
 
-- Document your reward criteria clearly
-- Handle missing or invalid inputs gracefully
-- Use helper functions for complex logic
-- Consider both positive rewards for desired behaviors and penalties for undesired behaviors
-- Test your reward function with sample completions before using it for training
+## General Best Practices
+
+### For All File Types
+- Test your files thoroughly before starting training runs
+- Use version control to track changes to your prompt files and reward functions
+- Document your reward criteria and environment logic clearly
+- Start with simple implementations and iterate based on results
+
+### For Effective Learning
+- Ensure reward signals are informative (not all zeros or all maximum values)
+- Provide a good distribution of examples in your prompt files
+- Balance difficulty to maintain a learning gradient
+- Monitor training metrics to verify the model is learning as expected

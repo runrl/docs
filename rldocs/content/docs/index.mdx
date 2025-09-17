@@ -1,71 +1,29 @@
 ---
 title: RunRL Documentation
-description: Python client for interacting with the RunRL API
+description: Documentation for running RL on RunRL.com
 ---
 
 # RunRL
 
-RunRL is a Python client library for interacting with the RunRL API, which provides tools for training and deploying machine learning models.
+RunRL is a platform for improving models and agents with reinforcement learning.
 
 ## Overview
 
-The RunRL client library provides a simple and intuitive interface for:
+The RunRL platform provides a simple yet powerful interface for training models with a variety of reinforcement learning algorithms on arbitrary prompt and reward files.
 
-- Managing training runs
-- Uploading and managing prompt and reward files
-- Downloading and deploying trained models
-- Monitoring training metrics and logs
-- Accessing GPU pricing information
+### Basic setup
+
+An RL run consists of three necessary components:
+
+* the **model**, which is the base model being trained;
+* the **prompts**, which represent the queries the model is responding to; and
+* the **reward function**, which evaluates the quality of the model's responses.
 
 ## Getting Started
 
 <Cards>
-  <Card title="Installation" href="/docs/installation" />
-  <Card title="Authentication" href="/docs/authentication" />
-  <Card title="API Reference" href="/docs/api-reference" />
-  <Card title="File Formats" href="/docs/file-formats" />
-  <Card title="Examples" href="/docs/examples" />
+  <Card title="Quick Start" href="/quickstart" />
+  <Card title="File Formats" href="/file-formats" />
+  <Card title="API Reference" href="/python/api-reference" />
+  <Card title="Examples" href="/python/examples" />
 </Cards>
-
-## Quick Start
-
-```python
-from runrl import RunRL
-
-# Initialize the client with your API key
-client = RunRL(api_key="rl-your-api-key")
-
-# List your runs
-runs = client.list_runs()
-print(f"You have {len(runs)} runs")
-
-# Upload prompt and reward files
-prompt_file = client.upload_prompt_file("path/to/prompt.jsonl", "My Prompt File")
-print(f"Uploaded prompt file with ID: {prompt_file['id']}")
-
-reward_file = client.upload_reward_file("path/to/reward.jsonl", "My Reward File")
-print(f"Uploaded reward file with ID: {reward_file['id']}")
-
-# Launch a training run
-run = client.create_run(
-    model_name="Qwen/Qwen3-4B",
-    prompt_file=prompt_file['id'],
-    reward_file=reward_file['id'],
-    epochs=2,
-    learning_rate=2e-6
-)
-print(f"Created run with ID: {run['id']}")
-
-# Check run status
-run_details = client.get_run_details(run['id'])
-print(f"Run status: {run_details['status']}")
-```
-
-## Features
-
-- **Authentication** - Secure API key authentication
-- **Run Management** - Create, list, and monitor training runs
-- **File Management** - Upload and manage prompt and reward files
-- **Model Deployment** - Download and deploy trained models
-- **Metrics & Logs** - Access training metrics and logs
-- **GPU Pricing** - Get information about GPU pricing

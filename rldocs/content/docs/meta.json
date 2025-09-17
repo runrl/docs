@@ -2,11 +2,8 @@
   "title": "RunRL Documentation",
   "pages": [
     "index",
-    "installation",
-    "authentication",
-    "api-reference",
+    "quickstart",
     "file-formats",
-    "examples",
-    "troubleshooting"
+    "python"
   ]
 }

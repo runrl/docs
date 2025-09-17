@@ -1,0 +1,121 @@
+---
+title: RunRL Quick Start
+description: Quick start
+---
+
+# Quickest Start
+
+You can load this entire example in one click by loading [this configuration](https://runrl.com/runs/create?config=47415e1f-c315-401d-84ae-1928ba790a07)!
+
+# Quick Start
+
+*Total cost: ~$25*
+
+Let's train a model to generate a funny joke with RL!
+
+The first thing to do is to go to the [create training run](https://runrl.com/runs/create) page.
+
+First, select the "reward function" option:
+
+![Reward Function](/images/reward_function.png) 
+
+Next, select "Qwen 3 4B" as the base model:
+
+![Base Model](/images/base_model.png)
+
+It's small enough to train quickly but versatile and intelligent enough to be well-suited for RL!
+
+Now, we need to create a prompt file. A prompt file is a jsonl, which takes on the following format, e.g.:
+
+
+
+```json
+{"prompt":[{"role":"system","content":"system prompt"},{"role":"user","content":"user prompt"}],"extra_info":123}
+{"prompt":[{"role":"system","content":"another system prompt"},{"role":"user","content":"a second user prompt"}],"extra_info":456}
+{"prompt":[{"role":"system","content":"yet another system prompt"},{"role":"user","content":"a third user prompt"}],"extra_info":789}
+```
+The most important parts of a prompt file is that each line is a JSON, and each JSON should contain a prompt key, which should point to a list of messages in the format `{"role": "user", "content": "text"}`.
+
+In this example, the prompt can always just be constant, so our jsonl will look something like
+
+```json
+{"prompt":[{"role":"system","content":""},{"role":"user","content":"Tell me your funniest joke!"}]}
+{"prompt":[{"role":"system","content":""},{"role":"user","content":"Tell me your funniest joke!"}]}
+{"prompt":[{"role":"system","content":""},{"role":"user","content":"Tell me your funniest joke!"}]}
+```
+
+It's good practice to have the prompts file be at least 50 lines for batch efficiency reasons, so let's make that file slightly longer. If you don't want to do it yourself, you can [download it here](/files/Funny%20joke.jsonl).
+
+Then, upload it to the prompts file section:
+
+![Base Model](/images/prompts.png)
+
+For the reward function, paste the following reward:
+
+````python
+from openai import OpenAI
+
+def reward_fn(completion, **kwargs):
+    client = OpenAI(api_key=your_key_here)
+    
+    if not completion or len(completion) == 0:
+        return 0.0
+    
+    joke = completion[0]["content"]
+    
+    response = client.responses.create(
+        model="gpt-5-nano",
+        input=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": f"""Please evaluate this joke, on a scale from 1–10. Make sure to consider how genuinely funny the joke is, as well as its originality, and whether it's interesting; don't reward stale humor. But your north star should be how funny it is!
+
+```
+{joke}
+```
+
+Please output your final score in <score></score> tags."""
+                    }
+                ]
+            }
+        ],
+        text={
+            "format": {
+                "type": "text"
+            },
+            "verbosity": "low"
+        },
+        reasoning={
+            "effort": "low"
+        },
+        tools=[],
+        store=False,
+    )
+    
+    response_text = response.output_text
+    
+    import re
+    score_match = re.search(r'<score>(\d+(?:\.\d+)?)</score>', response_text)
+    if score_match:
+        score = float(score_match.group(1))
+        # Return the score directly (1-10 scale)
+        return score
+    
+    # If no XML tags found, return 0
+    return 0.0
+````
+
+(You'll need an OpenAI api key for this.)
+
+![Base Model](/images/reward_2.png)
+
+Now, press "run"! In about 20 minutes, you'll get a model that's ever-so-slightly funnier than before:
+
+![Base Model](/images/run.png)
+
+Of course, you could run it for more epochs to make it even funnier! You can also deploy your model for some free slow inference, or [email us](mailto:founders@runrl.com) if you'd like to download your weights.
+
+Happy training!
