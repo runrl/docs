@@ -1,0 +1,556 @@
+---
+title: REST API Reference
+description: Complete reference for the RunRL REST API v1
+---
+
+# REST API Reference
+
+The RunRL REST API provides programmatic access to all platform features. Use it to integrate RunRL into your ML workflows, CI/CD pipelines, and custom applications.
+
+## Base URL
+
+```
+https://agi.motte.ai/api/v1
+```
+
+## Authentication
+
+All API requests require authentication using an API key. Create your API key in **Settings → API Keys**.
+
+### Authorization Header
+
+```bash
+Authorization: Bearer rl_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+### Example Request
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     https://agi.motte.ai/api/v1/health
+```
+
+## API Keys
+
+### Create API Key
+
+**Endpoint:** `POST /keys`  
+**Scope Required:** `write`
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My API Key",
+    "scopes": ["read", "write"],
+    "expires_at": "2025-12-31"
+  }' \
+  https://agi.motte.ai/api/v1/keys
+```
+
+**Parameters:**
+- `name` (string, required): Human-readable name for the key
+- `scopes` (array, required): Permissions: `["read"]`, `["write"]`, or `["read", "write"]`
+- `expires_at` (string, optional): ISO date string for expiration
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "api_key": {
+      "id": 123,
+      "name": "My API Key",
+      "scopes": ["read", "write"]
+    },
+    "token": "rl_abc123_newtoken",
+    "warning": "Store this token safely. You will not be able to see it again."
+  }
+}
+```
+
+### List API Keys
+
+**Endpoint:** `GET /keys`  
+**Scope Required:** `read`
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     https://agi.motte.ai/api/v1/keys
+```
+
+## Files
+
+### List Files
+
+**Endpoint:** `GET /files`  
+**Scope Required:** `read`
+
+```bash
+# List all files
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     https://agi.motte.ai/api/v1/files
+
+# Filter by type
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     "https://agi.motte.ai/api/v1/files?type=prompt"
+
+# Search and pagination
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     "https://agi.motte.ai/api/v1/files?search=my_file&page=1&per_page=20"
+```
+
+**Query Parameters:**
+- `type` (string, optional): Filter by `prompt`, `reward_function`, or `environment`
+- `search` (string, optional): Search by filename
+- `page` (integer, optional): Page number (default: 1)
+- `per_page` (integer, optional): Items per page (default: 20, max: 100)
+- `sort` (string, optional): Sort by `name`, `created_at`, `file_size` (default: `created_at`)
+- `direction` (string, optional): `asc` or `desc` (default: `desc`)
+
+### Upload File
+
+**Endpoint:** `POST /files`  
+**Scope Required:** `write`
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -F "file=@reward_function.py" \
+  -F "type=reward_function" \
+  -F "name=My Reward Function" \
+  https://agi.motte.ai/api/v1/files
+```
+
+**Parameters:**
+- `file` (file, required): The file to upload (max 50MB)
+- `type` (string, required): `prompt`, `reward_function`, or `environment`
+- `name` (string, optional): Custom name (defaults to filename)
+
+### Get File Info
+
+**Endpoint:** `GET /files/{fileId}`  
+**Scope Required:** `read`
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     https://agi.motte.ai/api/v1/files/abc123-uuid
+```
+
+### Download File
+
+**Endpoint:** `GET /files/{fileId}/download`  
+**Scope Required:** `read`
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     https://agi.motte.ai/api/v1/files/abc123-uuid/download \
+     -o downloaded_file.py
+```
+
+### Get File Content (Text)
+
+**Endpoint:** `GET /files/{fileId}/content`  
+**Scope Required:** `read`
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     https://agi.motte.ai/api/v1/files/abc123-uuid/content
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "file_id": "abc123-uuid",
+    "content": "def reward_fn(prompt, response):\n    return 1.0",
+    "lines": 15,
+    "size": 1234
+  }
+}
+```
+
+### Delete File
+
+**Endpoint:** `DELETE /files/{fileId}`  
+**Scope Required:** `write`
+
+```bash
+curl -X DELETE \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  https://agi.motte.ai/api/v1/files/abc123-uuid
+```
+
+## Runs
+
+### List Runs
+
+**Endpoint:** `GET /runs`  
+**Scope Required:** `read`
+
+```bash
+# List all runs
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     https://agi.motte.ai/api/v1/runs
+
+# Filter by status
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     "https://agi.motte.ai/api/v1/runs?status=RUNNING"
+
+# Date range and pagination
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     "https://agi.motte.ai/api/v1/runs?created_after=2025-01-01&page=1&per_page=10"
+```
+
+**Query Parameters:**
+- `status` (string, optional): `PENDING`, `PROVISIONING`, `SETTING_UP`, `READY`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`
+- `created_after` (string, optional): ISO date string
+- `created_before` (string, optional): ISO date string
+- `page`, `per_page`, `sort`, `direction`: Same as files
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": 123,
+        "status": "COMPLETED",
+        "type": "reward_function",
+        "model": "Qwen/Qwen3-8B",
+        "billing_start_time": "2025-09-09T01:38:36Z",
+        "billing_end_time": "2025-09-09T01:48:36Z",
+        "duration_seconds": 600,
+        "prompt_file": {
+          "id": "abc123-uuid",
+          "name": "my_prompts"
+        },
+        "reward_file": {
+          "id": "def456-uuid", 
+          "name": "my_reward"
+        }
+      }
+    ],
+    "pagination": {
+      "current_page": 1,
+      "per_page": 20,
+      "total": 150,
+      "last_page": 8
+    }
+  }
+}
+```
+
+### Create Run
+
+**Endpoint:** `POST /runs`  
+**Scope Required:** `write`
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen3-8B",
+    "prompt_file_id": "abc123-uuid",
+    "reward_file_id": "def456-uuid", 
+    "type": "reward_function",
+    "completion_length": 2048,
+    "epochs": 3,
+    "learning_rate_multiplier": 1.5,
+    "tool_ids": [1, 2, 3],
+    "hf_token": "hf_your_token"
+  }' \
+  https://agi.motte.ai/api/v1/runs
+```
+
+**Parameters:**
+- `model` (string, required): Model identifier (e.g., "Qwen/Qwen3-8B")
+- `prompt_file_id` (string, required): UUID of uploaded prompt file
+- `reward_file_id` (string, required): UUID of uploaded reward/environment file
+- `type` (string, required): `reward_function` or `environment`
+- `completion_length` (integer, optional): Max tokens (128-8192, default: 1024)
+- `epochs` (integer, optional): Training epochs (1-10, default: 1)
+- `learning_rate_multiplier` (number, optional): LR multiplier (0.1-10, default: 1.0)
+- `tool_ids` (array, optional): Array of tool IDs to attach
+- `hf_token` (string, optional): Hugging Face token for gated models
+
+### Get Run Details
+
+**Endpoint:** `GET /runs/{id}`  
+**Scope Required:** `read`
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     https://agi.motte.ai/api/v1/runs/123
+```
+
+### Cancel Run
+
+**Endpoint:** `POST /runs/{id}/cancel`  
+**Scope Required:** `write`
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  https://agi.motte.ai/api/v1/runs/123/cancel
+```
+
+### Get Run History
+
+**Endpoint:** `GET /runs/{id}/history`  
+**Scope Required:** `read`
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     https://agi.motte.ai/api/v1/runs/123/history
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "run_id": 123,
+    "history": [
+      {
+        "status": "PROVISIONING",
+        "message": "Selecting GPU cluster",
+        "timestamp": "2025-09-09T01:20:25Z"
+      },
+      {
+        "status": "RUNNING", 
+        "message": "Starting training process",
+        "timestamp": "2025-09-09T01:43:02Z"
+      }
+    ]
+  }
+}
+```
+
+### Get Run Metrics
+
+**Endpoint:** `GET /runs/{id}/metrics`  
+**Scope Required:** `read`
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+     https://agi.motte.ai/api/v1/runs/123/metrics
+```
+
+## Response Format
+
+All API responses use a consistent JSON structure:
+
+### Success Response
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully",
+  "data": { ... }
+}
+```
+
+### Error Response
+```json
+{
+  "success": false,
+  "error": "validation_error",
+  "message": "Validation failed",
+  "details": { ... },
+  "docs": "https://docs.motte.ai/api/scopes"
+}
+```
+
+## Rate Limiting
+
+Each API key has a rate limit of **10,000 requests per hour**. Rate limit information is included in response headers:
+
+```
+X-RateLimit-Limit: 10000
+X-RateLimit-Remaining: 9950
+X-RateLimit-Reset: 1694847600
+```
+
+When rate limited:
+```json
+{
+  "error": "Rate limit exceeded",
+  "retry_after": 3600,
+  "reset_time": "2025-09-09 20:00:00 UTC"
+}
+```
+
+## Scopes
+
+API keys support three permission scopes:
+
+- **`read`**: View runs, files, metrics, and history
+- **`write`**: Create runs, upload files, cancel runs 
+- **`admin`**: Full access including billing and user management
+
+## Error Codes
+
+| Code | HTTP | Description |
+|------|------|-------------|
+| `bad_request` | 400 | Invalid request parameters |
+| `unauthorized` | 401 | Invalid or missing API key |
+| `forbidden` | 403 | Insufficient permissions |
+| `not_found` | 404 | Resource not found |
+| `validation_error` | 422 | Request validation failed |
+| `rate_limit_exceeded` | 429 | Too many requests |
+| `internal_error` | 500 | Server error |
+
+## Python SDK Example
+
+Here's a complete example using the REST API with Python:
+
+```python
+import requests
+import json
+
+API_KEY = "rl_your_api_key_here"
+BASE_URL = "https://agi.motte.ai/api/v1"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+# 1. List existing runs
+response = requests.get(f"{BASE_URL}/runs", headers=headers)
+runs = response.json()
+print(f"You have {len(runs['data']['items'])} runs")
+
+# 2. Upload a reward function
+with open('reward_function.py', 'rb') as f:
+    files = {'file': f}
+    data = {'type': 'reward_function', 'name': 'My Reward Function'}
+    response = requests.post(f"{BASE_URL}/files", 
+                           headers={"Authorization": f"Bearer {API_KEY}"}, 
+                           files=files, data=data)
+    reward_file = response.json()
+    reward_file_id = reward_file['data']['id']
+
+# 3. Create a new run
+run_data = {
+    "model": "Qwen/Qwen3-8B",
+    "prompt_file_id": "your-prompt-file-uuid",
+    "reward_file_id": reward_file_id,
+    "type": "reward_function",
+    "epochs": 3,
+    "completion_length": 2048
+}
+
+response = requests.post(f"{BASE_URL}/runs", headers=headers, json=run_data)
+new_run = response.json()
+run_id = new_run['data']['id']
+print(f"Created run #{run_id}")
+
+# 4. Monitor run progress
+response = requests.get(f"{BASE_URL}/runs/{run_id}/history", headers=headers)
+history = response.json()
+print("Run history:")
+for event in history['data']['history']:
+    print(f"  {event['timestamp']}: {event['status']} - {event['message']}")
+```
+
+## JavaScript/TypeScript Example
+
+```typescript
+interface RunRLClient {
+  apiKey: string;
+  baseURL: string;
+}
+
+class RunRL implements RunRLClient {
+  constructor(public apiKey: string, public baseURL = 'https://agi.motte.ai/api/v1') {}
+
+  private async request(endpoint: string, options: RequestInit = {}) {
+    const response = await fetch(`${this.baseURL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+    }
+    
+    return response.json();
+  }
+
+  async listRuns(filters: {status?: string, page?: number} = {}) {
+    const params = new URLSearchParams();
+    if (filters.status) params.set('status', filters.status);
+    if (filters.page) params.set('page', String(filters.page));
+    
+    return this.request(`/runs?${params}`);
+  }
+
+  async createRun(runConfig: {
+    model: string;
+    prompt_file_id: string;
+    reward_file_id: string;
+    type: 'reward_function' | 'environment';
+    epochs?: number;
+  }) {
+    return this.request('/runs', {
+      method: 'POST',
+      body: JSON.stringify(runConfig),
+    });
+  }
+
+  async getRunDetails(runId: number) {
+    return this.request(`/runs/${runId}`);
+  }
+}
+
+// Usage
+const client = new RunRL('rl_your_api_key');
+const runs = await client.listRuns({status: 'RUNNING'});
+console.log('Running jobs:', runs.data.items);
+```
+
+## Webhooks (Coming Soon)
+
+Receive real-time notifications when run status changes:
+
+```json
+{
+  "event": "run.status_changed",
+  "run_id": 123,
+  "status": "COMPLETED",
+  "timestamp": "2025-09-09T10:30:00Z",
+  "billing_duration_seconds": 3600
+}
+```
+
+## Rate Limits & Best Practices
+
+- **Respect rate limits**: 10,000 requests/hour per API key
+- **Use pagination**: Don't fetch all runs at once
+- **Cache responses**: Avoid redundant API calls
+- **Handle errors gracefully**: Implement proper retry logic
+- **Use appropriate scopes**: Create read-only keys when possible
+
+## Need Help?
+
+- **Documentation**: Full guides at [docs.runrl.com](https://docs.runrl.com)
+- **API Status**: Check [status.runrl.com](https://status.runrl.com)  
+- **Support**: Email support@runrl.com
+
+## Changelog
+
+### v1.0 (Current)
+- Initial REST API release
+- Full CRUD operations for runs and files
+- API key management with scoping
+- Rate limiting and security features
+- Comprehensive error handling

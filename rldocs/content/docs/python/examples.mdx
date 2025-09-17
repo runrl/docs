@@ -1,368 +1,261 @@
 ---
-title: Usage Examples
-description: Practical examples of using the RunRL Python client
+title: Complete Examples  
+description: Real-world examples and templates for successful Motte.ai training runs
 ---
 
-# Usage Examples
+# Complete Examples
 
-This page provides practical examples of using the RunRL Python client for common tasks.
+Real-world templates and workflows for successful reinforcement learning training on Motte.ai.
 
-## Basic Setup
+## Example 1: Math Problem Solving
 
-First, import the RunRL client and initialize it with your API key:
+Train a model to solve arithmetic problems with step-by-step reasoning.
 
-```python
-from runrl import RunRL
+### Prompt File (math_prompts.jsonl)
 
-# Initialize with your API key
-client = RunRL(api_key="rl-your-api-key")
+```json
+{"messages": [{"role": "system", "content": "You are a math tutor. Show your work step by step, then give your final answer in <answer></answer> tags."}, {"role": "user", "content": "What is 47 × 23?"}], "expected_result": "1081"}
+{"messages": [{"role": "system", "content": "You are a math tutor. Show your work step by step, then give your final answer in <answer></answer> tags."}, {"role": "user", "content": "Solve: 156 ÷ 12"}], "expected_result": "13"}
+{"messages": [{"role": "system", "content": "You are a math tutor. Show your work step by step, then give your final answer in <answer></answer> tags."}, {"role": "user", "content": "Calculate: (45 + 67) × 2 - 18"}], "expected_result": "206"}
 ```
 
-## Managing Prompt Files
-
-For details on prompt file format requirements, see the [File Formats](/docs/file-formats#prompt-files) documentation.
-
-### Uploading a Prompt File
+### Reward Function (math_reward.py)
 
 ```python
-# Upload a prompt file with a friendly name
-prompt_file = client.upload_prompt_file(
-    file_path="path/to/prompt.jsonl",
-    friendly_name="My Prompt File"
-)
+import re
 
-# Print the file ID for later use
-print(f"Uploaded prompt file with ID: {prompt_file['id']}")
-```
-
-### Listing Prompt Files
-
-```python
-# List all prompt files
-prompt_files = client.list_prompt_files()
-
-# Print information about each file
-for file in prompt_files:
-    print(f"ID: {file['id']}, Name: {file['friendly_name']}, Size: {file['size']} bytes")
-```
-
-### Getting a Prompt File Preview
-
-```python
-# Get a preview of a prompt file
-preview = client.get_prompt_file_preview("file-123")
-
-# Print the preview content
-print(preview['content'])
-```
-
-## Managing Reward Files
-
-For details on reward function format requirements, see the [File Formats](/docs/file-formats#reward-functions) documentation.
-
-### Uploading a Reward File
-
-```python
-# Upload a reward file with a friendly name
-reward_file = client.upload_reward_file(
-    file_path="path/to/reward.jsonl",
-    friendly_name="My Reward File"
-)
-
-# Print the file ID for later use
-print(f"Uploaded reward file with ID: {reward_file['id']}")
-```
-
-### Listing Reward Files
-
-```python
-# List all reward files
-reward_files = client.list_reward_files()
-
-# Print information about each file
-for file in reward_files:
-    print(f"ID: {file['id']}, Name: {file['friendly_name']}, Size: {file['size']} bytes")
-```
-
-## Creating and Managing Runs
-
-For details on the hyperparameters used when creating a run, see the [API Reference](/docs/api-reference#create_run) documentation.
-
-### Creating a Run
-
-```python
-# Create a new run
-run = client.create_run(
-    model_name="Qwen/Qwen3-4B",
-    prompt_file="file-123",  # ID of your prompt file
-    reward_file="file-456",  # ID of your reward file
-    epochs=3,
-    learning_rate=1e-5
-)
-
-# Print the run ID for later use
-print(f"Created run with ID: {run['id']}")
-```
-
-### Listing Runs
-
-```python
-# List all runs
-runs = client.list_runs()
-
-# Print information about each run
-for run in runs:
-    print(f"ID: {run['id']}, Status: {run['status']}, Model: {run['model_name']}")
-```
-
-### Getting Run Details
-
-```python
-# Get details for a specific run
-run_details = client.get_run_details("run-123")
-
-# Print detailed information
-print(f"Run ID: {run_details['id']}")
-print(f"Status: {run_details['status']}")
-print(f"Created At: {run_details['created_at']}")
-print(f"Model: {run_details['model_name']}")
-```
-
-### Canceling a Run
-
-```python
-# Cancel a run
-result = client.cancel_run("run-123")
-
-# Print the result
-print(f"Cancellation result: {result}")
-```
-
-## Monitoring Training Progress
-
-### Getting Stored Metrics
-
-```python
-# Get metrics for a run
-metrics = client.get_stored_metrics("run-123")
-
-# Print or plot the metrics
-import matplotlib.pyplot as plt
-
-# Example: Plot loss over time
-if 'loss' in metrics:
-    plt.figure(figsize=(10, 6))
-    plt.plot(metrics['loss'])
-    plt.title('Training Loss')
-    plt.xlabel('Step')
-    plt.ylabel('Loss')
-    plt.grid(True)
-    plt.show()
-```
-
-### Getting Stored Logs
-
-```python
-# Get logs for a run
-logs = client.get_stored_logs("run-123", max_lines=100)
-
-# Print the logs
-for log in logs.get('logs', []):
-    print(f"[{log['timestamp']}] {log['message']}")
-```
-
-### Streaming Logs in Real-time
-
-```python
-import asyncio
-
-async def stream_logs_example():
-    # Stream logs for a run
-    async for log_entry in client.stream_logs("run-123", follow=True):
-        print(f"[{log_entry['timestamp']}] {log_entry['message']}")
-
-# Run the async function
-asyncio.run(stream_logs_example())
-```
-
-## Working with Models
-
-### Downloading a Trained Model
-
-```python
-# Download a trained model
-client.download_model(
-    job_name="my-model",
-    output_path="path/to/save/model.tar.gz"
-)
-```
-
-### Deploying a Model
-
-```python
-# Deploy a trained model
-deployment = client.deploy_model("my-model")
-
-# Print deployment information
-print(f"Deployment ID: {deployment['id']}")
-print(f"Status: {deployment['status']}")
-print(f"Endpoint: {deployment['endpoint']}")
-```
-
-### Listing Deployments
-
-```python
-# List deployments for a model
-deployments = client.list_deployments("my-model")
-
-# Print information about each deployment
-for deployment in deployments:
-    print(f"ID: {deployment['id']}, Status: {deployment['status']}")
-```
-
-## GPU Pricing
-
-### Getting All GPU Prices
-
-```python
-# Get prices for all GPU types
-prices = client.get_all_gpu_prices()
-
-# Print pricing information
-for price in prices:
-    print(f"GPU Type: {price['gpu_type']}, Price: ${price['price_per_hour']} per hour")
-```
-
-### Getting Price for a Specific GPU Type
-
-```python
-# Get price for a specific GPU type
-price = client.get_gpu_price("H100")
-
-# Print pricing information
-print(f"H100 Price: ${price['price_per_hour']} per hour")
-```
-
-## Complete Training Workflow
-
-Here's a complete example that demonstrates a typical workflow from uploading files to creating a run and monitoring progress:
-
-```python
-import os
-import time
-from runrl import RunRL
-
-# Initialize the client
-api_key = os.environ.get("RUNRL_API_KEY")
-client = RunRL(api_key=api_key)
-
-# Upload prompt and reward files
-prompt_file = client.upload_prompt_file(
-    file_path="data/prompt.jsonl",
-    friendly_name="Example Prompt File"
-)
-print(f"Uploaded prompt file with ID: {prompt_file['id']}")
-
-reward_file = client.upload_reward_file(
-    file_path="data/reward.jsonl",
-    friendly_name="Example Reward File"
-)
-print(f"Uploaded reward file with ID: {reward_file['id']}")
-
-# Create a run
-run = client.create_run(
-    model_name="Qwen/Qwen3-4B",
-    prompt_file=prompt_file['id'],
-    reward_file=reward_file['id'],
-    epochs=2,
-    learning_rate=2e-6
-)
-print(f"Created run with ID: {run['id']}")
-
-# Monitor the run status
-while True:
-    run_details = client.get_run_details(run['id'])
-    status = run_details['status']
-    print(f"Run status: {status}")
+def reward_fn(prompt, response, expected_result=None):
+    """Reward function for math problem solving"""
     
-    if status in ['completed', 'failed', 'canceled']:
-        break
+    score = 0.0
     
-    time.sleep(60)  # Check every minute
-
-# If the run completed successfully, download the model
-if run_details['status'] == 'completed':
-    client.download_model(
-        job_name=run_details['job_name'],
-        output_path=f"models/{run_details['job_name']}.tar.gz"
-    )
-    print(f"Downloaded model to models/{run_details['job_name']}.tar.gz")
+    # Extract answer from response
+    answer_match = re.search(r'<answer>(.*?)</answer>', response, re.IGNORECASE)
+    if not answer_match:
+        return 0.0  # No answer provided
+    
+    extracted_answer = answer_match.group(1).strip()
+    
+    # Check if answer matches expected result
+    try:
+        if expected_result is not None:
+            if str(expected_result) in extracted_answer:
+                score += 1.0  # Correct answer
+            else:
+                score += 0.1  # Wrong answer but formatted correctly
+    except:
+        score += 0.0
+    
+    # Bonus for showing work
+    if any(word in response.lower() for word in ['step', 'first', 'then', 'multiply', 'divide', 'add', 'subtract']):
+        score += 0.2
+    
+    # Penalty for being too verbose
+    if len(response) > 1000:
+        score -= 0.1
+        
+    return max(0.0, min(1.0, score))
 ```
 
-## Error Handling Examples
+### Training Configuration
+- **Model**: `meta-llama/Llama-2-7b-chat-hf`
+- **Epochs**: 2
+- **Completion Length**: 512 tokens
+- **Expected Cost**: ~$160 (2 hours)
 
-### Handling Authentication Errors
+## Example 2: Code Review Assistant
 
-```python
-from runrl import RunRL, AuthenticationError
+Train a model to provide helpful code review feedback.
 
-try:
-    client = RunRL(api_key="invalid-api-key")
-except AuthenticationError as e:
-    print(f"Authentication failed: {e}")
-    # Handle authentication failure (e.g., prompt for a new API key)
+### Prompt File (code_review_prompts.jsonl)
+
+```json
+{"messages": [{"role": "system", "content": "You are a senior software engineer doing code review. Provide constructive feedback."}, {"role": "user", "content": "Review this Python function:\n\ndef calculate_total(items):\n    total = 0\n    for item in items:\n        total += item['price'] * item['quantity']\n    return total"}], "expected_keywords": ["error handling", "type hints", "docstring"]}
+{"messages": [{"role": "system", "content": "You are a senior software engineer doing code review. Provide constructive feedback."}, {"role": "user", "content": "Review this React component:\n\nfunction Button(props) {\n  return <button onClick={props.onClick}>{props.children}</button>;\n}"}], "expected_keywords": ["typescript", "props validation", "accessibility"]}
 ```
 
-### Handling Resource Not Found Errors
+### Reward Function (code_review_reward.py)
 
 ```python
-from runrl import RunRL, NotFoundError
-
-client = RunRL(api_key="rl-your-api-key")
-
-try:
-    run_details = client.get_run_details("non-existent-run")
-except NotFoundError as e:
-    print(f"Run not found: {e}")
-    # Handle the error (e.g., prompt for a valid run ID)
+def reward_fn(prompt, response, expected_keywords=None):
+    """Reward function for code review quality"""
+    
+    score = 0.0
+    response_lower = response.lower()
+    
+    # Base score for providing any feedback
+    if len(response.strip()) > 50:
+        score += 0.3
+    
+    # Check for expected improvement areas
+    if expected_keywords:
+        keyword_matches = sum(1 for keyword in expected_keywords if keyword.lower() in response_lower)
+        score += (keyword_matches / len(expected_keywords)) * 0.4
+    
+    # Bonus for constructive language
+    positive_indicators = ['consider', 'suggest', 'could improve', 'might want', 'recommendation']
+    if any(indicator in response_lower for indicator in positive_indicators):
+        score += 0.2
+    
+    # Bonus for specific technical advice
+    if any(tech in response_lower for tech in ['typescript', 'error handling', 'testing', 'security', 'performance']):
+        score += 0.1
+        
+    return min(1.0, score)
 ```
 
-### Comprehensive Error Handling
+### Training Configuration
+- **Model**: `microsoft/DialoGPT-medium`
+- **Epochs**: 3
+- **Completion Length**: 256 tokens
+- **Expected Cost**: ~$240 (3 hours)
+
+## Example 3: Customer Support Training
+
+Train a model for empathetic and helpful customer service responses.
+
+### Prompt File (support_prompts.jsonl)
+
+```json
+{"messages": [{"role": "system", "content": "You are a customer support agent. Be helpful, empathetic, and professional."}, {"role": "user", "content": "I'm having trouble with my order. It was supposed to arrive yesterday but hasn't come yet."}], "sentiment_target": "empathetic"}
+{"messages": [{"role": "system", "content": "You are a customer support agent. Be helpful, empathetic, and professional."}, {"role": "user", "content": "Your product broke after just one day! This is unacceptable!"}], "sentiment_target": "calming"}
+```
+
+### Reward Function (support_reward.py)
 
 ```python
-from runrl import (
-    RunRL,
-    RunRLError,
-    AuthenticationError,
-    PermissionError,
-    NotFoundError,
-    APIServerError,
-    RequestError
-)
+def reward_fn(prompt, response, sentiment_target=None):
+    """Reward function for customer support quality"""
+    
+    score = 0.0
+    response_lower = response.lower()
+    
+    # Base score for reasonable length
+    if 20 <= len(response.strip()) <= 300:
+        score += 0.3
+    
+    # Check for empathetic language
+    empathy_words = ['understand', 'sorry', 'apologize', 'help', 'assist', 'concern']
+    empathy_count = sum(1 for word in empathy_words if word in response_lower)
+    score += min(0.3, empathy_count * 0.1)
+    
+    # Bonus for professional tone
+    professional_indicators = ['please', 'would be happy', 'let me', 'i can help']
+    if any(indicator in response_lower for indicator in professional_indicators):
+        score += 0.2
+    
+    # Penalty for negative language  
+    negative_words = ['no', "can't", 'impossible', 'wrong', 'stupid']
+    if any(word in response_lower for word in negative_words):
+        score -= 0.2
+        
+    return max(0.0, min(1.0, score))
+```
 
-client = RunRL(api_key="rl-your-api-key")
+### Training Configuration
+- **Model**: `microsoft/DialoGPT-medium` 
+- **Epochs**: 2
+- **Completion Length**: 256 tokens
+- **Expected Cost**: ~$160 (2 hours)
 
-try:
-    # Attempt to perform an operation
-    result = client.get_run_details("run-123")
-except AuthenticationError as e:
-    print(f"Authentication failed: {e}")
-    # Handle authentication issues
-except PermissionError as e:
-    print(f"Permission denied: {e}")
-    # Handle permission issues
-except NotFoundError as e:
-    print(f"Resource not found: {e}")
-    # Handle not found issues
-except APIServerError as e:
-    print(f"Server error: {e}")
-    # Handle server errors
-except RequestError as e:
-    print(f"Request error: {e}")
-    # Handle client request errors
-except RunRLError as e:
-    print(f"General error: {e}")
-    # Handle other RunRL errors
-except Exception as e:
-    print(f"Unexpected error: {e}")
-    # Handle unexpected errors
+## Example 4: Quick Testing Setup
+
+Minimal example for testing your setup with low cost.
+
+### Mini Test File (test_prompts.jsonl)
+```json
+{"messages": [{"role": "user", "content": "Say hello"}], "expected": "hello"}
+{"messages": [{"role": "user", "content": "Count to 3"}], "expected": "1, 2, 3"}
+{"messages": [{"role": "user", "content": "What color is the sky?"}], "expected": "blue"}
+```
+
+### Simple Test Reward Function
+```python
+def reward_fn(prompt, response, expected=None):
+    """Simple test reward function"""
+    if expected and expected.lower() in response.lower():
+        return 1.0
+    return 0.5 if len(response.strip()) > 5 else 0.0
+```
+
+### Test Configuration
+- **Model**: Any small model
+- **Epochs**: 1
+- **Completion Length**: 64 tokens
+- **Expected Cost**: ~$20-30 (15-20 minutes)
+
+## Workflow Templates
+
+### Standard Training Workflow
+
+1. **Prepare data** (100+ diverse examples)
+2. **Create test run** (5-10 examples, minimal settings)
+3. **Validate setup** (check metrics, cancel after 10 min)
+4. **Launch full run** (complete dataset, optimized settings)
+5. **Monitor progress** (check every 30 minutes)
+6. **Analyze results** (cost efficiency, performance gains)
+
+### Cost-Optimized Workflow  
+
+1. **Start with 1 epoch** and increase if needed
+2. **Use 256-512 completion length** initially  
+3. **Monitor reward/cost ratio** closely
+4. **Cancel early** if no improvement after 1 hour
+5. **Iterate quickly** with smaller experiments
+
+## Best Practices
+
+### File Organization
+- **Name files clearly** - `math_prompts_v2.jsonl`
+- **Version your experiments** - Track what works
+- **Keep backups** - Save successful configurations
+
+### Cost Management
+- **Set budgets** before each run ($50, $100, $200)
+- **Monitor hourly progress** - $80 should show clear improvement
+- **Cancel underperforming runs** - Don't throw good money after bad
+
+### Reward Function Design
+- **Start simple** - Basic keyword/length checking
+- **Iterate complexity** - Add sophistication gradually  
+- **Test extensively** - Validate logic before training
+- **Document assumptions** - Comment your scoring logic
+
+## Monitoring Your Training
+
+### Key Metrics to Watch
+
+**During Training**:
+- **Reward curves** - Should trend upward over time
+- **Policy loss** - Should decrease as model learns
+- **KL divergence** - Should stay reasonable (not too high)
+- **Cost accumulation** - Track real-time spending
+
+**Success Indicators**:
+- Final reward > 0.7 (good performance)
+- Consistent improvement over time
+- Cost per reward improvement < $50
+- No errors in terminal logs
+
+### Using the Dashboard
+
+1. **Monitor active runs** - See current costs and status
+2. **Track total spending** - Understand your usage patterns
+3. **Quick navigation** - Jump to any run detail page
+4. **Real-time updates** - Costs and status update automatically
+
+### Using the Run Detail Page
+
+1. **Live metrics** - Charts update every few seconds
+2. **Terminal streaming** - Watch real-time logs
+3. **W&B integration** - Advanced experiment tracking
+4. **One-click cancellation** - Stop runs that aren't working
+
+## Need Help?
+
+- **File format issues?** Check [File Formats](/docs/file-formats)
+- **Training problems?** See [Troubleshooting](/docs/troubleshooting)
+- **Cost concerns?** Review [Getting Started](/docs/installation#understanding-costs)
+- **Search questions?** Use Cmd/Ctrl+K in the web interface
+
+Ready to try these examples? [Start training now!](https://motte.ai/runs/create)
