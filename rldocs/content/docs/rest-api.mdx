@@ -10,7 +10,7 @@ The RunRL REST API provides programmatic access to all platform features. Use it
 ## Base URL
 
 ```
-https://agi.motte.ai/api/v1
+https://runrl.com/api/v1
 ```
 
 ## Authentication
@@ -27,7 +27,7 @@ Authorization: Bearer rl_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://agi.motte.ai/api/v1/health
+     https://runrl.com/api/v1/health
 ```
 
 ## API Keys
@@ -46,7 +46,7 @@ curl -X POST \
     "scopes": ["read", "write"],
     "expires_at": "2025-12-31"
   }' \
-  https://agi.motte.ai/api/v1/keys
+  https://runrl.com/api/v1/keys
 ```
 
 **Parameters:**
@@ -77,7 +77,7 @@ curl -X POST \
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://agi.motte.ai/api/v1/keys
+     https://runrl.com/api/v1/keys
 ```
 
 ## Files
@@ -90,15 +90,15 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 ```bash
 # List all files
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://agi.motte.ai/api/v1/files
+     https://runrl.com/api/v1/files
 
 # Filter by type
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     "https://agi.motte.ai/api/v1/files?type=prompt"
+     "https://runrl.com/api/v1/files?type=prompt"
 
 # Search and pagination
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     "https://agi.motte.ai/api/v1/files?search=my_file&page=1&per_page=20"
+     "https://runrl.com/api/v1/files?search=my_file&page=1&per_page=20"
 ```
 
 **Query Parameters:**
@@ -120,7 +120,7 @@ curl -X POST \
   -F "file=@reward_function.py" \
   -F "type=reward_function" \
   -F "name=My Reward Function" \
-  https://agi.motte.ai/api/v1/files
+  https://runrl.com/api/v1/files
 ```
 
 **Parameters:**
@@ -135,7 +135,7 @@ curl -X POST \
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://agi.motte.ai/api/v1/files/abc123-uuid
+     https://runrl.com/api/v1/files/abc123-uuid
 ```
 
 ### Download File
@@ -145,7 +145,7 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://agi.motte.ai/api/v1/files/abc123-uuid/download \
+     https://runrl.com/api/v1/files/abc123-uuid/download \
      -o downloaded_file.py
 ```
 
@@ -156,7 +156,7 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://agi.motte.ai/api/v1/files/abc123-uuid/content
+     https://runrl.com/api/v1/files/abc123-uuid/content
 ```
 
 **Response:**
@@ -180,7 +180,7 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 ```bash
 curl -X DELETE \
   -H "Authorization: Bearer YOUR_API_KEY" \
-  https://agi.motte.ai/api/v1/files/abc123-uuid
+  https://runrl.com/api/v1/files/abc123-uuid
 ```
 
 ## Runs
@@ -193,15 +193,15 @@ curl -X DELETE \
 ```bash
 # List all runs
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://agi.motte.ai/api/v1/runs
+     https://runrl.com/api/v1/runs
 
 # Filter by status
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     "https://agi.motte.ai/api/v1/runs?status=RUNNING"
+     "https://runrl.com/api/v1/runs?status=RUNNING"
 
 # Date range and pagination
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     "https://agi.motte.ai/api/v1/runs?created_after=2025-01-01&page=1&per_page=10"
+     "https://runrl.com/api/v1/runs?created_after=2025-01-01&page=1&per_page=10"
 ```
 
 **Query Parameters:**
@@ -264,7 +264,7 @@ curl -X POST \
     "tool_ids": [1, 2, 3],
     "hf_token": "hf_your_token"
   }' \
-  https://agi.motte.ai/api/v1/runs
+  https://runrl.com/api/v1/runs
 ```
 
 **Parameters:**
@@ -285,7 +285,7 @@ curl -X POST \
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://agi.motte.ai/api/v1/runs/123
+     https://runrl.com/api/v1/runs/123
 ```
 
 ### Cancel Run
@@ -296,7 +296,7 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 ```bash
 curl -X POST \
   -H "Authorization: Bearer YOUR_API_KEY" \
-  https://agi.motte.ai/api/v1/runs/123/cancel
+  https://runrl.com/api/v1/runs/123/cancel
 ```
 
 ### Get Run History
@@ -306,7 +306,7 @@ curl -X POST \
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://agi.motte.ai/api/v1/runs/123/history
+     https://runrl.com/api/v1/runs/123/history
 ```
 
 **Response:**
@@ -338,7 +338,7 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://agi.motte.ai/api/v1/runs/123/metrics
+     https://runrl.com/api/v1/runs/123/metrics
 ```
 
 ## Response Format
@@ -361,7 +361,7 @@ All API responses use a consistent JSON structure:
   "error": "validation_error",
   "message": "Validation failed",
   "details": { ... },
-  "docs": "https://docs.motte.ai/api/scopes"
+  "docs": "https://docs.runrl.com/api/scopes"
 }
 ```
 
@@ -413,7 +413,7 @@ import requests
 import json
 
 API_KEY = "rl_your_api_key_here"
-BASE_URL = "https://agi.motte.ai/api/v1"
+BASE_URL = "https://runrl.com/api/v1"
 
 headers = {
     "Authorization": f"Bearer {API_KEY}",
@@ -467,7 +467,7 @@ interface RunRLClient {
 }
 
 class RunRL implements RunRLClient {
-  constructor(public apiKey: string, public baseURL = 'https://agi.motte.ai/api/v1') {}
+  constructor(public apiKey: string, public baseURL = 'https://runrl.com/api/v1') {}
 
   private async request(endpoint: string, options: RequestInit = {}) {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
