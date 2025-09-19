@@ -14,14 +14,14 @@ from runrl import RunRL
 
 client = RunRL(
     api_key="rl-your-api-key",
-    base_url="https://runrlusercontent.com"  # Optional, defaults to this URL
+    base_url="https://runrl.com/api/v1"  # Optional, defaults to this URL
 )
 ```
 
 ### Parameters
 
 - `api_key` (str, required): Your RunRL API key
-- `base_url` (str, optional): The base URL for the RunRL API. Defaults to "https://runrlusercontent.com"
+- `base_url` (str, optional): The base URL for the RunRL API. Defaults to "https://runrl.com/api/v1"
 
 ## User Data
 
@@ -134,7 +134,7 @@ result = client.cancel_run("run-123")
 
 ## Prompt Files
 
-For details on prompt file format requirements, see the [File Formats](/docs/file-formats#prompt-files) documentation.
+For details on prompt file format requirements, see the [File Formats](/file-formats#prompt-files) documentation.
 
 ### list_prompt_files()
 
@@ -191,7 +191,7 @@ preview = client.get_prompt_file_preview("file-123")
 
 ## Reward Files
 
-For details on reward function format requirements, see the [File Formats](/docs/file-formats#reward-functions) documentation.
+For details on reward function format requirements, see the [File Formats](/file-formats#reward-functions) documentation.
 
 ### list_reward_files()
 
