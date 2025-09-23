@@ -3,10 +3,6 @@ title: File Formats
 description: Guide on how to format input files for RunRL
 ---
 
-# File Formats
-
-This guide explains the file formats used by RunRL for training reinforcement learning models.
-
 ## Prompt Files
 
 Prompt files contain the examples that your model will learn from during training. They define the inputs that will be sent to the model.
@@ -44,9 +40,8 @@ You can include additional fields that your reward function might need for evalu
 - Each line must be a complete, valid JSON object
 - No trailing commas are allowed between lines
 - Include a diverse distribution of prompts that represent your use case
-- Generally, aim for at least 100 distinct examples for effective training
+  - Generally, aim for at least 100 distinct examples for effective training
 - Consider including difficulty levels or categories if your task has natural groupings
-- Test your JSONL file with a JSON validator to ensure proper formatting
 
 ## Reward Functions
 
@@ -55,10 +50,9 @@ Reward functions evaluate the model's responses and provide feedback signals tha
 ### Core Concepts
 
 A reward function:
-- Receives the model's completion/response
+- Receives the model's completion/response, along with any additional fields from the prompt file (like expected answers)
 - Evaluates the quality of that response
-- Returns a numerical reward score
-- Can access additional data from the prompt file (like expected answers)
+- Returns a numerical score
 
 ### Reward Design Principles
 
@@ -66,6 +60,7 @@ A reward function:
 - **Clear Signal**: Higher rewards should consistently indicate better performance
 - **Balanced Feedback**: Consider both rewarding desired behaviors and penalizing undesired ones
 - **Robust Evaluation**: Handle edge cases and unexpected inputs gracefully
+- **Low Hackability**: Make it difficult for the model to cheat the reward function
 
 ### Implementation Languages
 
@@ -99,7 +94,7 @@ For language-specific implementation details, see:
 ## General Best Practices
 
 ### For All File Types
-- Test your files thoroughly before starting training runs
+- Test your files before starting training runs
 - Use version control to track changes to your prompt files and reward functions
 - Document your reward criteria and environment logic clearly
 - Start with simple implementations and iterate based on results
