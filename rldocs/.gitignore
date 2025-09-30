@@ -78,7 +78,6 @@ lerna-debug.log*
 
 # Gatsby files
 .cache/
-public
 
 # Static Site Generators (e.g., Jekyll, Hugo)
 _site/
