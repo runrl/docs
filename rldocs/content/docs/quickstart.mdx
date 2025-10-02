@@ -53,14 +53,11 @@ For the reward function, paste the following reward:
 
 ````python
 from openai import OpenAI
+client = OpenAI(api_key=your_key_here)
 
 def reward_fn(completion, **kwargs):
-    client = OpenAI(api_key=your_key_here)
-    
-    if not completion or len(completion) == 0:
+    if not completion:
         return 0.0
-    
-    joke = completion[0]["content"]
     
     response = client.responses.create(
         model="gpt-5-nano",
@@ -73,7 +70,7 @@ def reward_fn(completion, **kwargs):
                         "text": f"""Please evaluate this joke, on a scale from 1–10. Make sure to consider how genuinely funny the joke is, as well as its originality, and whether it's interesting; don't reward stale humor. But your north star should be how funny it is!
 
 ```
-{joke}
+{completion}
 ```
 
 Please output your final score in <score></score> tags."""
@@ -107,7 +104,7 @@ Please output your final score in <score></score> tags."""
     return 0.0
 ````
 
-(You'll need an OpenAI api key for this.)
+(You'll need an OpenAI API key for this.)
 
 ![Reward function](/images/reward_2.png)
 
