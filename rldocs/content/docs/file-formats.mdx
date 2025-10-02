@@ -7,13 +7,13 @@ A run requires
 - a prompt file
 - either a reward file or an environment file
 
-Prompt files contain the prompts the model will respond to.
+**Prompt files** contain the prompts the model will respond to.
 
-Reward files contain a function to evaluate the model's responses, returning a reward value. Higher rewards correspond to desired behaviors.
+**Reward files** contain a function to evaluate the model's responses, returning a reward value. Higher rewards correspond to desired behaviors.
 
-Environment files contain an environment class with a setup function and a step function.
+**Environment files** contain an environment class with a setup function and a step function.
 
-**Reward Function vs. Environment**: Choose the reward function if you only need single step interactions. Choose the environment class if you need multistep interactions with tool calling or feedback.
+**Reward Function vs. Environment**: Choose a reward function if you only need single step interactions. Choose an environment class if you need multistep interactions with tool calling or feedback.
 
 ## Prompt Files Requirements
 Prompt files must be in JSONL (JSON Lines) format, with each line containing a complete, valid JSON object. The file extension should be `.jsonl`.
@@ -105,11 +105,12 @@ class CustomEnv:
   - If it's a float the average of this metric for each step will be displayed on a graph
   - If it's a string, for each step 5 randomly sampled examples (along with the prompt) will be displayed in a table.
 
+For each prompt, an environment will be initialized. Then `step` will be called repeatedly with the model's response to initial prompt, and any conversation history (previous responses and observations).
+
 ### Best Practices
-For each prompt, an environment will be initialized. Then step will be called repeatedly with the model's response to initial prompt, and any conversation history (previous responses and observations).
-- The environment should not be able to never return done=True. Having a max number of steps is usually a good idea.
+- To prevent excessively long trajectories, the environment should limit the number of steps
 {/* - the length of the llm input builds up over the episode. If it passes the max_input_length, it will fail. Increase input length, and decrease response, observation, and steps per episode to deal with this. */}
-- All the same reward design principles also apply to the reward with the environment
+- The reward function design principles also apply to the environment rewards.
 
 
 ## Optimizing the Reward Function/Environment Class
