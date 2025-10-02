@@ -1,5 +1,5 @@
 ---
-title: RunRL Quick Start
+title: Quick Start
 ---
 
 # Quickest Start
@@ -18,13 +18,13 @@ First, select the "reward function" option:
 
 ![Reward Function](/images/reward_function.png) 
 
-Next, select "Qwen 3 4B" as the base model:
+Next, select "Qwen3 4B" as the base model:
 
 ![Base Model](/images/base_model.png)
 
 It's small enough to train quickly but versatile and intelligent enough to be well-suited for RL!
 
-Now, we need to create a prompt file. A prompt file is a jsonl, which takes on the following format, e.g.:
+Now, we need to create a prompt file. A prompt file is a set of JSON object lines, which takes on the following format, e.g.:
 
 
 
@@ -35,7 +35,7 @@ Now, we need to create a prompt file. A prompt file is a jsonl, which takes on t
 ```
 The most important parts of a prompt file is that each line is a JSON, and each JSON should contain a prompt key, which should point to a list of messages in the format `{"role": "user", "content": "text"}`.
 
-In this example, the prompt can always just be constant, so our jsonl will look something like
+In this example, the prompt can always just be constant, so our JSONL will look something like
 
 ```json
 {"prompt":[{"role":"system","content":""},{"role":"user","content":"Tell me your funniest joke!"}]}
@@ -109,11 +109,11 @@ Please output your final score in <score></score> tags."""
 
 (You'll need an OpenAI api key for this.)
 
-![Base Model](/images/reward_2.png)
+![Reward function](/images/reward_2.png)
 
 Now, press "run"! In about 20 minutes, you'll get a model that's ever-so-slightly funnier than before:
 
-![Base Model](/images/run.png)
+![Improving reward graph](/images/run.png)
 
 Of course, you could run it for more epochs to make it even funnier! You can also deploy your model for some free slow inference, or [email us](mailto:founders@runrl.com) if you'd like to download your weights.
 

@@ -1,21 +1,21 @@
 ---
-title: RunRL Documentation
+title: Overview
 ---
 
-## Overview
+The RunRL platform provides a simple yet powerful interface for training LLMs with reinforcement learning on arbitrary prompt and reward files.
 
-The RunRL platform provides a simple yet powerful interface for training models with a variety of reinforcement learning algorithms on arbitrary prompt and reward files.
+## Setup
 
-### Basic setup
+An RL run consists of three main components:
 
-An RL run consists of three necessary components:
+* a **base model**, such as Qwen3 4B
+* **prompts**, the inputs to the model
+* either a **reward function** or **environment class**, which score model outputs
 
-* the **model**, which is the base model being trained;
-* the **prompts**, which represent the queries the model is responding to; and one of the following
- * the **reward function**, which evaluates the quality of the model's responses.
- * the **environment class**, which includes a initialization function and a step function that
+Additionally, you can specify:
+* [MCP tools](tools) for your model to call
+* Hyperparameters such as learning rate multiplier and number of epochs
 
-## Getting Started
 
 <Cards>
   <Card title="Quick Start" href="/quickstart" />
