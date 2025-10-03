@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "quickstart",
+    "rest-api",
     "file-formats",
     "python",
     "changelog"
