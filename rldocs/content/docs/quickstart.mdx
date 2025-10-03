@@ -1,6 +1,5 @@
 ---
-title: RunRL Quick Start
-description: Quick start
+title: Quick Start
 ---
 
 # Quickest Start
@@ -19,13 +18,13 @@ First, select the "reward function" option:
 
 ![Reward Function](/images/reward_function.png) 
 
-Next, select "Qwen 3 4B" as the base model:
+Next, select "Qwen3 4B" as the base model:
 
 ![Base Model](/images/base_model.png)
 
 It's small enough to train quickly but versatile and intelligent enough to be well-suited for RL!
 
-Now, we need to create a prompt file. A prompt file is a jsonl, which takes on the following format, e.g.:
+Now, we need to create a prompt file. A prompt file is a set of JSON object lines, which takes on the following format, e.g.:
 
 
 
@@ -36,7 +35,7 @@ Now, we need to create a prompt file. A prompt file is a jsonl, which takes on t
 ```
 The most important parts of a prompt file is that each line is a JSON, and each JSON should contain a prompt key, which should point to a list of messages in the format `{"role": "user", "content": "text"}`.
 
-In this example, the prompt can always just be constant, so our jsonl will look something like
+In this example, the prompt can always just be constant, so our JSONL will look something like
 
 ```json
 {"prompt":[{"role":"system","content":""},{"role":"user","content":"Tell me your funniest joke!"}]}
@@ -54,14 +53,11 @@ For the reward function, paste the following reward:
 
 ````python
 from openai import OpenAI
+client = OpenAI(api_key=your_key_here)
 
 def reward_fn(completion, **kwargs):
-    client = OpenAI(api_key=your_key_here)
-    
-    if not completion or len(completion) == 0:
+    if not completion:
         return 0.0
-    
-    joke = completion[0]["content"]
     
     response = client.responses.create(
         model="gpt-5-nano",
@@ -74,7 +70,7 @@ def reward_fn(completion, **kwargs):
                         "text": f"""Please evaluate this joke, on a scale from 1–10. Make sure to consider how genuinely funny the joke is, as well as its originality, and whether it's interesting; don't reward stale humor. But your north star should be how funny it is!
 
 ```
-{joke}
+{completion}
 ```
 
 Please output your final score in <score></score> tags."""
@@ -108,13 +104,13 @@ Please output your final score in <score></score> tags."""
     return 0.0
 ````
 
-(You'll need an OpenAI api key for this.)
+(You'll need an OpenAI API key for this.)
 
-![Base Model](/images/reward_2.png)
+![Reward function](/images/reward_2.png)
 
 Now, press "run"! In about 20 minutes, you'll get a model that's ever-so-slightly funnier than before:
 
-![Base Model](/images/run.png)
+![Improving reward graph](/images/run.png)
 
 Of course, you could run it for more epochs to make it even funnier! You can also deploy your model for some free slow inference, or [email us](mailto:founders@runrl.com) if you'd like to download your weights.
 

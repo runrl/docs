@@ -1,0 +1,9 @@
+---
+title: Tool calling
+---
+
+With RunRL, you can train agents to use MCP tools. Any unauthenticated remote MCP server should work. To host MCP servers, you can use [Cloudflare](https://developers.cloudflare.com/agents/model-context-protocol/) or [Klavis](https://www.klavis.ai/).
+
+To start training with an MCP, select a Qwen model and multi-turn environment. Then, click "Add tools" and "Create tool" to connect to the MCP.
+
+During training, a list of the MCP tools will be added to your prompts, and tool calls in the agent loop will be processed automatically.

@@ -1,25 +1,26 @@
 ---
-title: File Formats
-description: Guide on how to format input files for RunRL
+title: Interface and File Formats Guide
 ---
 
-## Prompt Files
+## Overview
+A run requires 
+- a prompt file
+- either a reward file or an environment file
 
-Prompt files contain the examples that your model will learn from during training. They define the inputs that will be sent to the model.
+**Prompt files** contain the prompts the model will respond to.
 
-### Format Requirements
+**Reward files** contain a function to evaluate the model's responses, returning a reward value. Higher rewards correspond to desired behaviors.
 
+**Environment files** contain an environment class with a setup function and a step function.
+
+**Reward Function vs. Environment**: Choose a reward function if you only need single step interactions. Choose an environment class if you need multistep interactions with tool calling or feedback.
+
+## Prompt Files Requirements
 Prompt files must be in JSONL (JSON Lines) format, with each line containing a complete, valid JSON object. The file extension should be `.jsonl`.
-
-### Required Structure
-
 Each line in your prompt file must include:
-
 - `prompt`: An array of message objects, where each message has:
   - `role`: The role of the speaker (e.g., "system", "user", "assistant")
-  - `content`: The actual message text
-
-### Additional Fields
+  - `content`: The message text
 
 You can include additional fields that your reward function might need for evaluation. Common examples include:
 - `expected_result`: The expected answer or output
@@ -36,71 +37,82 @@ You can include additional fields that your reward function might need for evalu
 ```
 
 ### Best Practices
-
-- Each line must be a complete, valid JSON object
-- No trailing commas are allowed between lines
 - Include a diverse distribution of prompts that represent your use case
   - Generally, aim for at least 100 distinct examples for effective training
 - Consider including difficulty levels or categories if your task has natural groupings
 
 ## Reward Functions
 
-Reward functions evaluate the model's responses and provide feedback signals that guide the learning process. They determine how well the model is performing on your task.
+**Requirements**: The reward function file must be a Python file and contain a reward function with a signature that matches either
 
-### Core Concepts
+- `def reward_fn(completion: str, **kwargs) -> float` 
 
-A reward function:
-- Receives the model's completion/response, along with any additional fields from the prompt file (like expected answers)
-- Evaluates the quality of that response
-- Returns a numerical score
+    or
+
+- `def reward_fn(completion: str, **kwargs) -> tuple[float, Dict[str, float | str]]`
+
+**Inputs**: 
+- `completion`: A string - the model's response.
+- `**kwargs`: Contains all fields from the corresponding JSONL line in the prompt file. For example, if your prompt line includes `{"prompt": [...], "expected_result": 42, "difficulty": "hard"}`, then your reward function will receive `expected_result=42` and `difficulty="hard"` as keyword arguments. This allows you to access any metadata needed for evaluation.
+
+**Outputs**: There are two valid output formats. 
+- returning a numerical score, the reward
+- returning a tuple where the first element is the numerical reward and the second item is a dictionary of information to be tracked
+  - Each key in the info dict should be a string and the corresponding value either a float or a string
+  - If it's a float the average of this metric for each step will be displayed on a graph
+  - If it's a string, for each step 5 randomly sampled examples (along with the prompt) will be displayed in a table.
+
+Global variables can be used and declared outside of the reward function. If they are stateful, make sure to write thread safe code.
 
 ### Reward Design Principles
-
-- **Varied Scores**: Ensure your reward function produces a range of values. If all responses get the same reward, the model cannot learn to distinguish good from bad.
+- **Varied Scores**: Ensure the reward function produces a range of values. If all responses get the same reward, the model cannot learn to distinguish good from bad.
 - **Clear Signal**: Higher rewards should consistently indicate better performance
-- **Balanced Feedback**: Consider both rewarding desired behaviors and penalizing undesired ones
 - **Robust Evaluation**: Handle edge cases and unexpected inputs gracefully
 - **Low Hackability**: Make it difficult for the model to cheat the reward function
 
-### Implementation Languages
-
-For language-specific implementation details, see:
-- [Python Implementation Guide](/python/file-formats#reward-functions)
-
 ## Environment Classes
 
-Environment classes create interactive scenarios where the model's actions affect the state and receive feedback through observations and rewards. They're useful for sequential decision-making tasks.
+**Requirements**: The environment class file must be a python file and contain a environment class function that conforms to the following interface.
 
-### Core Concepts
+```python
+class CustomEnv:
+    def setup(self, **kwargs) -> None:
+        """Initialize the environment."""
+        pass
+    
+    def step(self, action: str) -> Dict:
+        """
+        Process an action and return the result.
+        
+        Returns:
+            Dict with keys:
+                - 'observation': str, the next observation
+                - 'reward': float, the reward for this step
+                - 'done': bool, whether the episode is complete
+                - 'reward_info_dict': Optional[Dict[str, Union[str, float]]], additional information to be plotted
+        """
+        pass
+```
 
-An environment:
-- Maintains internal state across interactions
-- Receives actions from the model
-- Returns observations, rewards, and termination signals
-- Resets between episodes
+**`setup` Inputs**: `kwargs` contains all fields from the corresponding line in the prompt file (like in the reward function formulation)
+**`step` Inputs**: `action` is a string, the model's response (like `completion` in the reward function formulation)
+**`step` Outputs**: `step` returns a dict containing the following
+- `observation`: the environment's response to the action. For example, in a game of 20 questions, the observation might be `yes` or `no` in response to the question posed in the action.
+- `reward`: the numerical reward for that step
+- `done`: `True` if the episode is complete, otherwise `False`
+- `reward_info_dict`: a dictionary of information to be tracked (same as optional dictionary returned in the reward function formulation)
+  - Each key in the info dict should be a string and the corresponding value either a float or a string
+  - If it's a float the average of this metric for each step will be displayed on a graph
+  - If it's a string, for each step 5 randomly sampled examples (along with the prompt) will be displayed in a table.
 
-### Key Components
+For each prompt, an environment will be initialized. Then `step` will be called repeatedly with the model's response to initial prompt, and any conversation history (previous responses and observations).
 
-1. **Initialization**: Sets up the initial state for each episode
-2. **Step Function**: Processes actions and returns feedback
-3. **Termination Logic**: Determines when an episode ends
-4. **Reward Structure**: Provides appropriate feedback for learning
+### Best Practices
+- To prevent excessively long trajectories, the environment should limit the number of steps
+{/* - the length of the llm input builds up over the episode. If it passes the max_input_length, it will fail. Increase input length, and decrease response, observation, and steps per episode to deal with this. */}
+- The reward function design principles also apply to the environment rewards.
 
-### Implementation Languages
 
-For language-specific implementation details, see:
-- [Python Implementation Guide](/python/file-formats#environment-classes)
-
-## General Best Practices
-
-### For All File Types
-- Test your files before starting training runs
-- Use version control to track changes to your prompt files and reward functions
-- Document your reward criteria and environment logic clearly
-- Start with simple implementations and iterate based on results
-
-### For Effective Learning
-- Ensure reward signals are informative (not all zeros or all maximum values)
-- Provide a good distribution of examples in your prompt files
-- Balance difficulty to maintain a learning gradient
-- Monitor training metrics to verify the model is learning as expected
+## Optimizing the Reward Function/Environment Class
+* RunRL parallelizes reward computation (and init/steps for environments), so don't worry about making things asynchronous.
+* However, declaring expensive or reused resources (e.g. API clients) as global variables outside the reward function/environment class can greatly speed up the computation.
