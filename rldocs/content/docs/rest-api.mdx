@@ -5,7 +5,7 @@ description: Complete reference for the RunRL REST API v1
 
 # REST API Reference
 
-The RunRL REST API provides programmatic access to all platform features. Use it to integrate RunRL into your ML workflows, CI/CD pipelines, and custom applications.
+The RunRL REST API exposes every feature available in the product UI, allowing you to automate training runs, manage files and tools, deploy models, and integrate RunRL into your own workflows.
 
 ## Base URL
 
@@ -15,15 +15,15 @@ https://runrl.com/api/v1
 
 ## Authentication
 
-All API requests require authentication using an API key. Create your API key in **Settings → API Keys**.
-
-### Authorization Header
+Every request must include an API key generated from **Settings → API Keys**. Present the key in the `Authorization` header using the `Bearer` scheme.
 
 ```bash
 Authorization: Bearer rl_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-### Example Request
+> 📌 **Tip:** Create separate keys for automation, CI, or teammates. Keys can be scoped to `read`, `write`, or `admin` permissions.
+
+### Quick Health Check
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \
@@ -34,318 +34,196 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 
 ### Create API Key
 
-**Endpoint:** `POST /keys`  
-**Scope Required:** `write`
+- **Endpoint:** `POST /keys`
+- **Scope Required:** `write`
 
 ```bash
 curl -X POST \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Authorization: Bearer YOUR_ADMIN_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "My API Key",
+    "name": "CI Pipeline",
     "scopes": ["read", "write"],
-    "expires_at": "2025-12-31"
+    "requests_per_hour": 5000
   }' \
   https://runrl.com/api/v1/keys
 ```
 
-**Parameters:**
-- `name` (string, required): Human-readable name for the key
-- `scopes` (array, required): Permissions: `["read"]`, `["write"]`, or `["read", "write"]`
-- `expires_at` (string, optional): ISO date string for expiration
+### List / Inspect API Keys
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "api_key": {
-      "id": 123,
-      "name": "My API Key",
-      "scopes": ["read", "write"]
-    },
-    "token": "rl_abc123_newtoken",
-    "warning": "Store this token safely. You will not be able to see it again."
-  }
-}
-```
+- **Endpoints:**
+  - `GET /keys` (list)
+  - `GET /keys/{id}/usage` (usage statistics)
+- **Scope Required:** `read`
 
-### List API Keys
+### Update / Delete API Keys
 
-**Endpoint:** `GET /keys`  
-**Scope Required:** `read`
-
-```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://runrl.com/api/v1/keys
-```
+- **Endpoints:**
+  - `PUT /keys/{id}` (rename, toggle active, adjust scopes/limits)
+  - `DELETE /keys/{id}`
+- **Scope Required:** `write`
 
 ## Files
 
+Files drive training runs. You can manage prompts, reward/environment code, and SFT datasets directly via the API.
+
 ### List Files
 
-**Endpoint:** `GET /files`  
-**Scope Required:** `read`
+- **Endpoint:** `GET /files`
+- **Scope:** `read`
 
 ```bash
-# List all files
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://runrl.com/api/v1/files
-
-# Filter by type
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-     "https://runrl.com/api/v1/files?type=prompt"
-
-# Search and pagination
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-     "https://runrl.com/api/v1/files?search=my_file&page=1&per_page=20"
+     "https://runrl.com/api/v1/files?type=prompt&search=chatbot"
 ```
 
-**Query Parameters:**
-- `type` (string, optional): Filter by `prompt`, `reward_function`, or `environment`
-- `search` (string, optional): Search by filename
-- `page` (integer, optional): Page number (default: 1)
-- `per_page` (integer, optional): Items per page (default: 20, max: 100)
-- `sort` (string, optional): Sort by `name`, `created_at`, `file_size` (default: `created_at`)
-- `direction` (string, optional): `asc` or `desc` (default: `desc`)
+**Filters:** `type` (`prompt`, `reward_function`, `environment`, `sft`), `search`, `page`, `per_page`, `sort`, `direction`.
 
-### Upload File
-
-**Endpoint:** `POST /files`  
-**Scope Required:** `write`
+### Upload (Multipart)
 
 ```bash
 curl -X POST \
   -H "Authorization: Bearer YOUR_API_KEY" \
-  -F "file=@reward_function.py" \
-  -F "type=reward_function" \
-  -F "name=My Reward Function" \
+  -F "file=@prompt.jsonl" \
+  -F "type=prompt" \
+  -F "name=Support Prompts" \
   https://runrl.com/api/v1/files
 ```
 
-**Parameters:**
-- `file` (file, required): The file to upload (max 50MB)
-- `type` (string, required): `prompt`, `reward_function`, or `environment`
-- `name` (string, optional): Custom name (defaults to filename)
-
-### Get File Info
-
-**Endpoint:** `GET /files/{fileId}`  
-**Scope Required:** `read`
-
-```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://runrl.com/api/v1/files/abc123-uuid
-```
-
-### Download File
-
-**Endpoint:** `GET /files/{fileId}/download`  
-**Scope Required:** `read`
-
-```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://runrl.com/api/v1/files/abc123-uuid/download \
-     -o downloaded_file.py
-```
-
-### Get File Content (Text)
-
-**Endpoint:** `GET /files/{fileId}/content`  
-**Scope Required:** `read`
-
-```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://runrl.com/api/v1/files/abc123-uuid/content
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "file_id": "abc123-uuid",
-    "content": "def reward_fn(prompt, response):\n    return 1.0",
-    "lines": 15,
-    "size": 1234
-  }
-}
-```
-
-### Delete File
-
-**Endpoint:** `DELETE /files/{fileId}`  
-**Scope Required:** `write`
-
-```bash
-curl -X DELETE \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  https://runrl.com/api/v1/files/abc123-uuid
-```
-
-## Runs
-
-### List Runs
-
-**Endpoint:** `GET /runs`  
-**Scope Required:** `read`
-
-```bash
-# List all runs
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://runrl.com/api/v1/runs
-
-# Filter by status
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-     "https://runrl.com/api/v1/runs?status=RUNNING"
-
-# Date range and pagination
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-     "https://runrl.com/api/v1/runs?created_after=2025-01-01&page=1&per_page=10"
-```
-
-**Query Parameters:**
-- `status` (string, optional): `PENDING`, `PROVISIONING`, `SETTING_UP`, `READY`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`
-- `created_after` (string, optional): ISO date string
-- `created_before` (string, optional): ISO date string
-- `page`, `per_page`, `sort`, `direction`: Same as files
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "items": [
-      {
-        "id": 123,
-        "status": "COMPLETED",
-        "type": "reward_function",
-        "model": "Qwen/Qwen3-8B",
-        "billing_start_time": "2025-09-09T01:38:36Z",
-        "billing_end_time": "2025-09-09T01:48:36Z",
-        "duration_seconds": 600,
-        "prompt_file": {
-          "id": "abc123-uuid",
-          "name": "my_prompts"
-        },
-        "reward_file": {
-          "id": "def456-uuid", 
-          "name": "my_reward"
-        }
-      }
-    ],
-    "pagination": {
-      "current_page": 1,
-      "per_page": 20,
-      "total": 150,
-      "last_page": 8
-    }
-  }
-}
-```
-
-### Create Run
-
-**Endpoint:** `POST /runs`  
-**Scope Required:** `write`
+### Create from Content (Reward / Environment Code)
 
 ```bash
 curl -X POST \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen/Qwen3-8B",
-    "prompt_file_id": "abc123-uuid",
-    "reward_file_id": "def456-uuid", 
     "type": "reward_function",
-    "completion_length": 2048,
-    "epochs": 3,
-    "learning_rate_multiplier": 1.5,
-    "tool_ids": [1, 2, 3],
-    "hf_token": "hf_your_token"
+    "name": "Latency Reward",
+    "content": "def reward_fn(prompt, response):\n    return 1 - response.latency"
   }' \
-  https://runrl.com/api/v1/runs
+  https://runrl.com/api/v1/files
 ```
 
-**Parameters:**
-- `model` (string, required): Model identifier (e.g., "Qwen/Qwen3-8B")
-- `prompt_file_id` (string, required): UUID of uploaded prompt file
-- `reward_file_id` (string, required): UUID of uploaded reward/environment file
-- `type` (string, required): `reward_function` or `environment`
-- `completion_length` (integer, optional): Max tokens (128-8192, default: 1024)
-- `epochs` (integer, optional): Training epochs (1-10, default: 1)
-- `learning_rate_multiplier` (number, optional): LR multiplier (0.1-10, default: 1.0)
-- `tool_ids` (array, optional): Array of tool IDs to attach
-- `hf_token` (string, optional): Hugging Face token for gated models
+### Retrieve, Preview, and Download
 
-### Get Run Details
+- `GET /files/{fileId}` – metadata
+- `GET /files/{fileId}/preview` – first lines or truncated code preview
+- `GET /files/{fileId}/content` – raw text content (prompt/SFT JSONL, Python code)
+- `GET /files/{fileId}/download` – download the original file
 
-**Endpoint:** `GET /runs/{id}`  
-**Scope Required:** `read`
+### Update or Delete
+
+- `PUT /files/{fileId}` to rename or update reward/environment code
+- `DELETE /files/{fileId}` to remove an unused file (fails if active runs still reference it)
+- **Scope:** `write`
+
+## Runs
+
+Runs encapsulate RL training jobs. The API now exposes the same end-to-end control found in the UI.
+
+### List Runs
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://runrl.com/api/v1/runs/123
+     "https://runrl.com/api/v1/runs?status=RUNNING&per_page=10"
 ```
 
-### Cancel Run
-
-**Endpoint:** `POST /runs/{id}/cancel`  
-**Scope Required:** `write`
+### Create Run
 
 ```bash
 curl -X POST \
   -H "Authorization: Bearer YOUR_API_KEY" \
-  https://runrl.com/api/v1/runs/123/cancel
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen2.5-7B",
+    "prompt_file_id": "PROMPT_UUID",
+    "reward_file_id": "REWARD_UUID",
+    "sft_file_id": "SFT_UUID",
+    "type": "reward_function",
+    "completion_length": 2048,
+    "epochs": 3,
+    "learning_rate_multiplier": 1.2,
+    "package_requirements": ["wandb==0.17.4"],
+    "tool_ids": [12, 18]
+  }' \
+  https://runrl.com/api/v1/runs
 ```
 
-### Get Run History
+Parameters mirror the run creation modal, including SFT datasets, package requirements, Hugging Face tokens, and tool attachments.
 
-**Endpoint:** `GET /runs/{id}/history`  
-**Scope Required:** `read`
+### Inspect & Control
+
+- `GET /runs/{id}` – detailed run state (including tools, files, hf_name)
+- `GET /runs/{id}/history` – status timeline
+- `GET /runs/{id}/logs` – paginated logs with redaction support
+- `GET /runs/{id}/logs/stream` – **Server-Sent Events** stream for real-time logs
+- `GET /runs/{id}/metrics` – W&B metrics proxy
+- `GET /runs/{id}/completions` – completions captured in W&B
+- `POST /runs/{id}/cancel` – cancel in-progress runs
+
+## Deployments
+
+Deploy trained checkpoints to managed infrastructure directly via the API.
+
+- `GET /deployments` – list your deployments
+- `GET /deployments/{id}` – details (linked run info, status)
+- `POST /deployments/check` – validate a run is deployable (HF checkpoint exists, not already deployed, etc.)
+- `POST /deployments` – trigger deployment (requires positive balance & active API key)
+- `DELETE /deployments/{id}` – remove deployment records
+
+All deployment endpoints require the `write` scope.
+
+## Validation
+
+RunRL ships built-in validators for prompt, SFT, and reward code.
+
+- `POST /validation/reward-function`
+- `POST /validation/prompt`
+- `POST /validation/sft`
+
+Each endpoint accepts the same payloads as the UI validation modals and returns structured validation feedback (`valid`, `errors`, counts, etc.).
+
+## Tools
+
+Manage MCP tools via the API.
+
+- `GET /tools` – list public tools + your private tools (filter with `search`, `verified`, etc.)
+- `POST /tools` – register a new tool (requires unique name per owner)
+- `GET /tools/{id}` – tool metadata
+- `PUT /tools/{id}` – update name/description/visibility
+- `DELETE /tools/{id}` – remove a tool (owner or admin)
+- `POST /tools/test-mcp` – ping an MCP server URL and receive handshake diagnostics
+
+## Shared Configurations
+
+Shared configurations capture reusable training setups.
+
+- `GET /shared-configurations` – configurations you own
+- `GET /shared-configurations/browse` – discover public/unlisted configurations (filter by model, reward mode, visibility)
+- `GET /shared-configurations/{uuid}` – detail view (requires owner or shared visibility)
+- `GET /shared-configurations/{uuid}/data` – includes prompt preview & reward code snippets
+- `POST /shared-configurations` – save the current run recipe (files are copied if they belong to another user)
+- `POST /shared-configurations/{uuid}/copy` – clone to your account (copies files & configuration)
+- `POST /shared-configurations/{uuid}/like` – toggle like state
+- `PUT /shared-configurations/{uuid}` – rename, edit description, toggle visibility
+- `DELETE /shared-configurations/{uuid}` – remove configuration you own
+
+## Search
+
+The global search endpoint mirrors the in-app quick search.
+
+- **Endpoint:** `GET /search`
+- **Scope:** `read`
 
 ```bash
 curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://runrl.com/api/v1/runs/123/history
+     "https://runrl.com/api/v1/search?q=reward+function"
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "run_id": 123,
-    "history": [
-      {
-        "status": "PROVISIONING",
-        "message": "Selecting GPU cluster",
-        "timestamp": "2025-09-09T01:20:25Z"
-      },
-      {
-        "status": "RUNNING", 
-        "message": "Starting training process",
-        "timestamp": "2025-09-09T01:43:02Z"
-      }
-    ]
-  }
-}
-```
-
-### Get Run Metrics
-
-**Endpoint:** `GET /runs/{id}/metrics`  
-**Scope Required:** `read`
-
-```bash
-curl -H "Authorization: Bearer YOUR_API_KEY" \
-     https://runrl.com/api/v1/runs/123/metrics
-```
+Returns matching runs, tools, and files in a single response.
 
 ## Response Format
 
-All API responses use a consistent JSON structure:
-
-### Success Response
 ```json
 {
   "success": true,
@@ -354,203 +232,37 @@ All API responses use a consistent JSON structure:
 }
 ```
 
-### Error Response
-```json
-{
-  "success": false,
-  "error": "validation_error",
-  "message": "Validation failed",
-  "details": { ... },
-  "docs": "https://docs.runrl.com/api/scopes"
-}
-```
+Errors follow a similar schema with `success: false`, an `error` code, descriptive `message`, and optional `details`.
 
 ## Rate Limiting
 
-Each API key has a rate limit of **10,000 requests per hour**. Rate limit information is included in response headers:
+API keys enforce hourly request quotas (default: **10,000/hour**). Limit information is reported in headers:
 
 ```
 X-RateLimit-Limit: 10000
-X-RateLimit-Remaining: 9950
-X-RateLimit-Reset: 1694847600
-```
-
-When rate limited:
-```json
-{
-  "error": "Rate limit exceeded",
-  "retry_after": 3600,
-  "reset_time": "2025-09-09 20:00:00 UTC"
-}
+X-RateLimit-Remaining: 9987
+X-RateLimit-Reset: 1732315200
 ```
 
 ## Scopes
 
-API keys support three permission scopes:
-
-- **`read`**: View runs, files, metrics, and history
-- **`write`**: Create runs, upload files, cancel runs 
-- **`admin`**: Full access including billing and user management
+| Scope  | Capabilities |
+|--------|--------------|
+| `read` | Fetch runs, files, metrics, search, validation |
+| `write` | Create/update runs, files, tools, shared configurations, deployments |
+| `admin` | Reserved for platform administration (billing, user management) |
 
 ## Error Codes
 
 | Code | HTTP | Description |
 |------|------|-------------|
-| `bad_request` | 400 | Invalid request parameters |
-| `unauthorized` | 401 | Invalid or missing API key |
-| `forbidden` | 403 | Insufficient permissions |
-| `not_found` | 404 | Resource not found |
-| `validation_error` | 422 | Request validation failed |
-| `rate_limit_exceeded` | 429 | Too many requests |
-| `internal_error` | 500 | Server error |
+| `bad_request` | 400 | Invalid payload or parameters |
+| `unauthorized` | 401 | Missing/invalid API key |
+| `forbidden` | 403 | Key lacks required scope or resource ownership |
+| `not_found` | 404 | Resource doesn't exist or isn't accessible |
+| `validation_error` | 422 | Validation failed (see `details`) |
+| `rate_limit_exceeded` | 429 | Hourly quota consumed |
+| `internal_error` | 500 | Unexpected server error |
 
-## Python SDK Example
+Need a new endpoint? Something missing from the docs? Let us know at **support@runrl.com** and we’ll take it from there.
 
-Here's a complete example using the REST API with Python:
-
-```python
-import requests
-import json
-
-API_KEY = "rl_your_api_key_here"
-BASE_URL = "https://runrl.com/api/v1"
-
-headers = {
-    "Authorization": f"Bearer {API_KEY}",
-    "Content-Type": "application/json"
-}
-
-# 1. List existing runs
-response = requests.get(f"{BASE_URL}/runs", headers=headers)
-runs = response.json()
-print(f"You have {len(runs['data']['items'])} runs")
-
-# 2. Upload a reward function
-with open('reward_function.py', 'rb') as f:
-    files = {'file': f}
-    data = {'type': 'reward_function', 'name': 'My Reward Function'}
-    response = requests.post(f"{BASE_URL}/files", 
-                           headers={"Authorization": f"Bearer {API_KEY}"}, 
-                           files=files, data=data)
-    reward_file = response.json()
-    reward_file_id = reward_file['data']['id']
-
-# 3. Create a new run
-run_data = {
-    "model": "Qwen/Qwen3-8B",
-    "prompt_file_id": "your-prompt-file-uuid",
-    "reward_file_id": reward_file_id,
-    "type": "reward_function",
-    "epochs": 3,
-    "completion_length": 2048
-}
-
-response = requests.post(f"{BASE_URL}/runs", headers=headers, json=run_data)
-new_run = response.json()
-run_id = new_run['data']['id']
-print(f"Created run #{run_id}")
-
-# 4. Monitor run progress
-response = requests.get(f"{BASE_URL}/runs/{run_id}/history", headers=headers)
-history = response.json()
-print("Run history:")
-for event in history['data']['history']:
-    print(f"  {event['timestamp']}: {event['status']} - {event['message']}")
-```
-
-## JavaScript/TypeScript Example
-
-```typescript
-interface RunRLClient {
-  apiKey: string;
-  baseURL: string;
-}
-
-class RunRL implements RunRLClient {
-  constructor(public apiKey: string, public baseURL = 'https://runrl.com/api/v1') {}
-
-  private async request(endpoint: string, options: RequestInit = {}) {
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
-    
-    return response.json();
-  }
-
-  async listRuns(filters: {status?: string, page?: number} = {}) {
-    const params = new URLSearchParams();
-    if (filters.status) params.set('status', filters.status);
-    if (filters.page) params.set('page', String(filters.page));
-    
-    return this.request(`/runs?${params}`);
-  }
-
-  async createRun(runConfig: {
-    model: string;
-    prompt_file_id: string;
-    reward_file_id: string;
-    type: 'reward_function' | 'environment';
-    epochs?: number;
-  }) {
-    return this.request('/runs', {
-      method: 'POST',
-      body: JSON.stringify(runConfig),
-    });
-  }
-
-  async getRunDetails(runId: number) {
-    return this.request(`/runs/${runId}`);
-  }
-}
-
-// Usage
-const client = new RunRL('rl_your_api_key');
-const runs = await client.listRuns({status: 'RUNNING'});
-console.log('Running jobs:', runs.data.items);
-```
-
-## Webhooks (Coming Soon)
-
-Receive real-time notifications when run status changes:
-
-```json
-{
-  "event": "run.status_changed",
-  "run_id": 123,
-  "status": "COMPLETED",
-  "timestamp": "2025-09-09T10:30:00Z",
-  "billing_duration_seconds": 3600
-}
-```
-
-## Rate Limits & Best Practices
-
-- **Respect rate limits**: 10,000 requests/hour per API key
-- **Use pagination**: Don't fetch all runs at once
-- **Cache responses**: Avoid redundant API calls
-- **Handle errors gracefully**: Implement proper retry logic
-- **Use appropriate scopes**: Create read-only keys when possible
-
-## Need Help?
-
-- **Documentation**: Full guides at [docs.runrl.com](https://docs.runrl.com)
-- **API Status**: Check [status.runrl.com](https://status.runrl.com)  
-- **Support**: Email support@runrl.com
-
-## Changelog
-
-### v1.0 (Current)
-- Initial REST API release
-- Full CRUD operations for runs and files
-- API key management with scoping
-- Rate limiting and security features
-- Comprehensive error handling
