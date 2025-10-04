@@ -1,103 +1,71 @@
 ---
-title: Getting Started
-description: How to set up your RunRL account and prepare for training
+title: Installation & Setup
+description: Install the RunRL Python SDK and configure authentication.
 ---
 
-# Getting Started
+# Installation & Setup
 
-Get your RunRL account ready for reinforcement learning training runs.
+The RunRL Python SDK (`runrl`) provides a typed client for the RunRL REST API. This page covers
+installation, authentication, and a minimal smoke test.
 
-## Account Setup
+## 1. Install the SDK
 
-### 1. Sign Up & Verification
+```bash
+pip install runrl==0.2.0
+```
 
-1. **Visit [RunRL](https://runrl.com)** and click "Sign Up"
-2. **Enter your email and password**
-3. **Check your email** for verification link
-4. **Click the verification link** to activate your account
+The package supports Python 3.9+ and ships with both synchronous and asynchronous clients. It does
+not install heavy ML dependencies—only standard HTTP tooling (httpx + pydantic).
 
-### 2. Billing Configuration
+## 2. Configure Credentials
 
-**Important**: Training runs cost **$80/hour** while active.
+Generate an API key from the RunRL dashboard and expose it to your environment. The client reads the
+`RUNRL_API_KEY` variable automatically; you can also pass it explicitly.
 
-1. **Navigate to [Settings > Billing](https://runrl.com/settings/billing)**
-2. **Add your payment method** (credit card required)
-3. **Review usage limits** and billing preferences
-4. **Set spending alerts** if desired
+```bash
+export RUNRL_API_KEY="rl_your_api_key"
 
-### 3. System Requirements
+# Optional: target staging or local environments
+export RUNRL_BASE_URL="https://staging.runrl.com/api/v1"
+```
 
-#### Browser Compatibility
-- **Chrome/Edge**: Recommended (best performance)
-- **Firefox**: Fully supported
-- **Safari**: Supported with minor limitations
-- **Mobile browsers**: Basic functionality available
+## 3. Verify Connectivity
 
-#### File Preparation
-- **Prompts**: JSONL format with message objects
-- **Reward Functions**: Python files with `reward_fn()` function
-- **File sizes**: Up to 50MB per upload
+```python
+from runrl import RunRLClient
 
-## First-Time Setup Checklist
+client = RunRLClient()
+print(client.config.base_url)
 
-Before creating your first run:
+# list your files to ensure auth works
+files = client.files.list(per_page=5)
+for file in files.items:
+    print(file.id, file.name, file.type)
+```
 
-- [ ] **Email verified** and account activated
-- [ ] **Billing information** added and validated
-- [ ] **Understanding of costs** - $80/hour for active runs
-- [ ] **Prompt file prepared** in correct JSONL format
-- [ ] **Reward function written** or environment class defined
+If this returns a `AuthenticationError`, double-check the API key. Network or SSL errors typically
+indicate proxies/firewalls blocking the request.
 
-## Understanding Costs
+## 4. Optional: Async Client
 
-### Billing Model
-- **$80 per hour** per active training run
-- **Billing starts** when run status changes to "RUNNING"
-- **Billing stops** when run completes, fails, or is cancelled
-- **Minimum charge**: Rounded to nearest minute
+```python
+import asyncio
+from runrl import AsyncRunRLClient
 
-### Cost Management Tips
-1. **Start small** - Test with 1 epoch and short completion lengths
-2. **Monitor actively** - Check progress every 15-30 minutes
-3. **Cancel if needed** - Don't hesitate to stop unprofitable runs
-4. **Use dashboard** - Track real-time costs across all runs
 
-## Test Your Setup
+async def main():
+    async with AsyncRunRLClient() as client:
+        files = await client.files.list(per_page=3)
+        print([f.name for f in files.items])
 
-### Create a Test Run
-1. **Prepare minimal data** - 5-10 sample prompts
-2. **Use simple reward function** - Basic length or keyword checking
-3. **Set minimal settings** - 1 epoch, 128 completion length
-4. **Monitor for 10 minutes** - Verify metrics are flowing
-5. **Cancel test run** - Practice cost control
+asyncio.run(main())
+```
 
-### Expected Costs
-- **10-minute test**: ~$13-15
-- **1-hour experiment**: $80
-- **Full training run**: $160-400 depending on duration
+## 5. Local Development Helpers
 
-## Common Setup Issues
+- **User agent**: Overwrite via `RunRLClient(user_agent="my-app/0.1.0")`.
+- **Timeouts**: `RunRLClient(timeout=60)` adjusts HTTP timeouts.
+- **Polling intervals**: `RunRLClient(poll_interval=10)` tunes future polling frequency.
 
-### "Billing not configured"
-**Solution**: Add payment method in Settings > Billing
-
-### "File upload failed"
-**Solution**: 
-- Check file format (JSONL for prompts)
-- Verify file size under 50MB
-- Ensure valid JSON on each line with same fields
-
-### "Model not found"
-**Solution**:
-- Check model name spelling
-- Ensure model exists on HuggingFace
-
-## Next Steps
-
-Once your account is set up:
-
-1. **Read [Creating Your First Run](/python/authentication)** for step-by-step guidance
-2. **Review [File Formats](/file-formats)** to prepare your data
-3. **Check [Examples](/python/examples)** for inspiration and templates
-
-Ready to start training? [Create your first run now!](https://runrl.com/runs/create)
+With the SDK installed and authenticated, continue to [Launch Your First Run](/python/authentication)
+or jump straight to the [API Reference](/python/api-reference).

@@ -1,366 +1,174 @@
 ---
 title: API Reference
-description: Launch runs with the RunRL Python SDK
+description: Official reference for the RunRL Python SDK.
 ---
 
-## Client Initialization
+# Python SDK Reference
 
-```python
-from runrl import RunRL
+The SDK exposes resource-oriented helpers that map directly to the REST API. All responses are
+Pydantic models, and long-running operations return futures.
 
-client = RunRL(api_key="rl-your-api-key")
-```
+## Clients
 
-### Parameters
+### `RunRLClient(**config)`
 
-- `api_key` (str, required): Your RunRL API key
+| Parameter        | Type    | Description                                      |
+|------------------|---------|--------------------------------------------------|
+| `api_key`        | str     | Overrides `RUNRL_API_KEY` environment variable. |
+| `base_url`       | str     | Defaults to `https://runrl.com/api/v1`.          |
+| `timeout`        | float   | HTTP timeout in seconds (default 30).            |
+| `poll_interval`  | float   | Seconds between polling future status (default 5).|
+| `max_poll_timeout` | float | Maximum seconds futures will wait (default 3600).|
 
-## User Data
+Attributes:
 
-### get_user_data()
+- `files`, `runs`, `deployments`, `tools`, `shared_configurations`, `validation`, `search`, `api_keys`
+- `config` – resolved `ClientConfig`
+- `close()` – close underlying `httpx.Client`
 
-Retrieves information about the authenticated user.
+### `AsyncRunRLClient(**config)`
 
-```python
-user_data = client.get_user_data()
-```
+Same configuration, but all methods are `async`. Use with `async with ...` or call `await client.aclose()`.
 
-**Returns**: A dictionary containing user information.
+---
+
+## Files
+
+Namespace: `client.files`
+
+| Method | Description |
+|--------|-------------|
+| `list(type=None, search=None, page=1, per_page=20, sort=None, direction=None)` | Returns `PagedResponse[File]`. |
+| `retrieve(file_id)` | Fetch a single `File`. |
+| `upload_path(path, file_type, name=None)` | Upload via multipart. `file_type` in `{prompt, reward_function, environment, sft}`. |
+| `create_from_content(name, content, file_type, original_filename=None)` | Create from string content (reward/env). |
+| `content(file_id)` | Return raw text content (raises if not text). |
+| `preview(file_id, lines=20)` | Return preview payload for prompts or code. |
+| `delete(file_id, force=False)` | Soft-delete by default; `force=True` purges permanently. |
+
+Async equivalents exist under `client.files` on `AsyncRunRLClient`.
+
+---
 
 ## Runs
 
-### list_runs()
+Namespace: `client.runs`
 
-Lists all runs for the authenticated user.
+| Method | Description |
+|--------|-------------|
+| `list(**filters)` | Paginated list of runs (`status`, `created_after`, `page`, etc.). |
+| `get(run_id)` | Fetch latest run state. |
+| `history(run_id)` | Status history records. |
+| `logs(run_id, last_line=0, limit=100)` | Pull batched logs. |
+| `stream_logs(run_id)` | Generator of SSE log lines. |
+| `metrics(run_id)` | Weights & Biases metrics snapshot. |
+| `completions(run_id)` | Stored completions payload. |
+| `cancel(run_id)` | Request cancellation. |
+| `create(**payload)` | Launch run and return `RunRLPollingFuture[Run]`. |
 
-```python
-runs = client.list_runs()
-```
+`RunRLPollingFuture` exposes `.initial`, `.status()`, `.result(timeout=None)`, `.cancel()`, and `.add_done_callback(fn)`.
 
-**Returns**: A list of dictionaries, each containing information about a run.
+Async methods mirror the same signatures and return `AsyncRunRLPollingFuture`.
 
-### create_run()
+Payload fields for `create`:
 
-Creates a new run with the specified parameters.
+- `model` (str, required)
+- `prompt_file_id` (str, required)
+- `reward_file_id` (str, required)
+- `type` (`reward_function` or `environment`)
+- `completion_length` (int, optional, 128-8192, default 1024)
+- `epochs` (int, optional, 1-100, default 1)
+- `learning_rate_multiplier` (float, optional, default 1.0)
+- `sft_file_id`, `tool_ids`, `package_requirements`, `hf_token`
 
-```python
-run = client.create_run(
-    model_name="Qwen/Qwen3-4B",
-    prompt_file="file-123",
-    reward_file="file-456",
-    max_seq_length=2048,
-    epochs=1
-)
-```
+---
 
-**Parameters**:
+## Deployments
 
-- `model_name` (str, required): The name of the model
-- `prompt_file` (str, required): ID of the uploaded prompt file
-- `reward_file` (str, required): ID of the uploaded reward file
+Namespace: `client.deployments`
 
-{/* **Hyperparameters**:
+| Method | Description |
+|--------|-------------|
+| `list(**filters)` | Returns `PagedResponse[Deployment]`. |
+| `get(deployment_id)` | Fetch deployment details. |
+| `check(run_id)` | Validate deploy-ability before creating. |
+| `create(run_id, poll_interval=None, max_timeout=None)` | Returns `RunRLPollingFuture[Deployment]`. |
+| `delete(deployment_id)` | Remove deployment (soft delete). |
 
-- `learning_rate` (float, optional): Controls the step size for updating model weights. Smaller values lead to slower but potentially more stable learning. In GRPO (Generative Reinforcement Learning with Proximal Optimization), it affects how quickly the agent's policy adapts. Defaults to 5e-6.
+---
 
-- `weight_decay` (float, optional): A regularization technique that penalizes large weights, helping to prevent overfitting and improve the model's generalization.
+## Tools
 
-- `adam_beta1` (float, optional): The exponential decay rate for the first moment estimates (mean of gradients) in the Adam optimizer. Typically around 0.9.
+Namespace: `client.tools`
 
-- `adam_beta2` (float, optional): The exponential decay rate for the second moment estimates (variance of gradients) in the Adam optimizer. Typically around 0.999.
+- `list(search=None, verified=None, owned_only=False, public_only=False, page=1, per_page=20, sort=None, direction=None)` → `PagedResponse[Tool]`
+- `create(name, mcp_url, description=None, is_public=False)` → `Tool`
+- `get(tool_id)` → `Tool`
+- `update(tool_id, **fields)` → `Tool`
+- `delete(tool_id)`
+- `test_connection(mcp_url)` → Diagnostics payload
 
-- `warmup_ratio` (float, optional): Fraction of total training steps for a learning rate warmup, where the learning rate gradually increases. Helps stabilize training early on.
+---
 
-- `kl_beta` (float, optional): Coefficient for the KL divergence penalty. It controls how much the policy can change in one update, ensuring stability. Setting this to 0.0 will significantly reduce memory requirements.
-*/}
-**Configuration Parameters**:
+## Shared Configurations
 
-- `max_seq_length` (int, optional): The maximum length of input sequences. Longer sequences provide more context but require more memory and computation. Defaults to 1024.
+Namespace: `client.shared_configurations`
 
-- `epochs` (int, optional): The number of complete passes through the training dataset. Defaults to 1.
+- `list()` → Owned configurations
+- `browse(**filters)` → Paginated public/unlisted results
+- `get(uuid)` → `SharedConfiguration`
+- `data(uuid)` → Full payload including file previews
+- `create(...)` → `SharedConfiguration`
+- `copy(uuid)` → dict with new UUID + file IDs
+- `like(uuid)` → dict with `liked` flag
+- `update(uuid, **fields)` → `SharedConfiguration`
+- `delete(uuid)`
 
-- `hf_token` (str, optional): Hugging Face token for accessing private models.
+---
 
-**Returns**: A dictionary containing information about the created run.
+## Validation
 
-### get_run_details(run_id)
+Namespace: `client.validation`
 
-Gets detailed information about a specific run.
+- `reward_function(code, mode="function", prompt_file_id=None)` → `ValidationResponse`
+- `prompt_file(prompt_file_id)` → `ValidationResponse`
+- `sft_file(sft_file_id)` → `ValidationResponse`
 
-```python
-run_details = client.get_run_details("run-123")
-```
+---
 
-**Parameters**:
-- `run_id` (str, required): The ID of the run
+## Search
 
-**Returns**: A dictionary containing detailed information about the run.
+Namespace: `client.search`
 
-### cancel_run(run_id)
+- `query(q: str)` → `SearchResults` containing `runs`, `files`, and `tools` lists.
 
-Cancels a running job.
+---
 
-```python
-result = client.cancel_run("run-123")
-```
+## API Keys
 
-**Parameters**:
-- `run_id` (str, required): The ID of the run to cancel
+Namespace: `client.api_keys`
 
-**Returns**: A dictionary containing the result of the cancellation.
+- `list()` → `[ApiKey]`
+- `create(name, scopes=None, requests_per_hour=None, expires_at=None)` → `ApiKeyToken`
+- `update(api_key_id, **fields)` → `ApiKey`
+- `usage(api_key_id)` → usage stats dict
+- `delete(api_key_id)`
 
-## Prompt Files
+---
 
-For details on prompt file format requirements, see the [File Formats](/file-formats#prompt-files) documentation.
+## Models
 
-### list_prompt_files()
+All responses are defined in `runrl.models`:
 
-Lists all prompt files for the authenticated user.
+- `File`
+- `Run`
+- `Deployment`
+- `Tool`
+- `SharedConfiguration`
+- `ValidationResponse`
+- `SearchResults`
+- `ApiKey`
+- `ApiKeyToken`
+- `PagedResponse`
 
-```python
-prompt_files = client.list_prompt_files()
-```
-
-**Returns**: A list of dictionaries, each containing information about a prompt file.
-
-### upload_prompt_file(file_path, friendly_name=None)
-
-Uploads a new prompt file.
-
-```python
-prompt_file = client.upload_prompt_file(
-    file_path="path/to/prompt.jsonl",
-    friendly_name="My Prompt File"  # Optional
-)
-```
-
-**Parameters**:
-- `file_path` (str, required): Path to the file to upload
-- `friendly_name` (str, optional): A user-friendly name for the file
-
-**Returns**: A dictionary containing information about the uploaded file.
-
-### delete_prompt_file(file_id)
-
-Deletes a prompt file.
-
-```python
-result = client.delete_prompt_file("file-123")
-```
-
-**Parameters**:
-- `file_id` (str, required): The ID of the file to delete
-
-**Returns**: A dictionary containing the result of the deletion.
-
-### get_prompt_file_preview(file_id)
-
-Gets a preview of a prompt file.
-
-```python
-preview = client.get_prompt_file_preview("file-123")
-```
-
-**Parameters**:
-- `file_id` (str, required): The ID of the file to preview
-
-**Returns**: A dictionary containing the file preview.
-
-## Reward Files
-
-For details on reward function format requirements, see the [File Formats](/file-formats#reward-functions) documentation.
-
-### list_reward_files()
-
-Lists all reward files for the authenticated user.
-
-```python
-reward_files = client.list_reward_files()
-```
-
-**Returns**: A list of dictionaries, each containing information about a reward file.
-
-### upload_reward_file(file_path, friendly_name=None)
-
-Uploads a new reward file.
-
-```python
-reward_file = client.upload_reward_file(
-    file_path="path/to/reward.jsonl",
-    friendly_name="My Reward File"  # Optional
-)
-```
-
-**Parameters**:
-- `file_path` (str, required): Path to the file to upload
-- `friendly_name` (str, optional): A user-friendly name for the file
-
-**Returns**: A dictionary containing information about the uploaded file.
-
-### delete_reward_file(file_id)
-
-Deletes a reward file.
-
-```python
-result = client.delete_reward_file("file-123")
-```
-
-**Parameters**:
-- `file_id` (str, required): The ID of the file to delete
-
-**Returns**: A dictionary containing the result of the deletion.
-
-### get_reward_file_content(file_id)
-
-Gets the content of a reward file.
-
-```python
-content = client.get_reward_file_content("file-123")
-```
-
-**Parameters**:
-- `file_id` (str, required): The ID of the file to get content for
-
-**Returns**: A dictionary containing the file content.
-
-## Models & Deployments
-
-### download_model(job_name, output_path)
-
-Downloads a trained model.
-
-```python
-client.download_model(
-    job_name="my-model",
-    output_path="path/to/save/model.tar.gz"
-)
-```
-
-**Parameters**:
-- `job_name` (str, required): The name of the job/model to download
-- `output_path` (str, required): The path where the model should be saved
-
-**Returns**: None. Prints a success message when the download is complete.
-
-### list_deployments(job_name)
-
-Lists all deployments for a specific job/model.
-
-```python
-deployments = client.list_deployments("my-model")
-```
-
-**Parameters**:
-- `job_name` (str, required): The name of the job/model
-
-**Returns**: A list of dictionaries, each containing information about a deployment.
-
-### deploy_model(job_name)
-
-Deploys a trained model.
-
-```python
-result = client.deploy_model("my-model")
-```
-
-**Parameters**:
-- `job_name` (str, required): The name of the job/model to deploy
-
-**Returns**: A dictionary containing information about the deployment.
-
-## Metrics & Logs
-
-### get_stored_metrics(run_id)
-
-Gets stored metrics for a specific run.
-
-```python
-metrics = client.get_stored_metrics("run-123")
-```
-
-**Parameters**:
-- `run_id` (str, required): The ID of the run
-
-**Returns**: A dictionary containing metrics for the run.
-
-### get_stored_logs(run_id, max_lines=2000)
-
-Gets stored logs for a specific run.
-
-```python
-logs = client.get_stored_logs(
-    run_id="run-123",
-    max_lines=2000  # Optional, defaults to 2000
-)
-```
-
-**Parameters**:
-- `run_id` (str, required): The ID of the run
-- `max_lines` (int, optional): Maximum number of log lines to retrieve. Defaults to 2000
-
-**Returns**: A dictionary containing logs for the run.
-
-### stream_logs(run_id, follow=True)
-
-Streams logs for a specific run in real-time.
-
-```python
-# This returns an async generator, so you need to use it in an async context
-async for log_entry in client.stream_logs("run-123", follow=True):
-    print(log_entry)
-```
-
-**Parameters**:
-- `run_id` (str, required): The ID of the run
-- `follow` (bool, optional): Whether to continue streaming new logs as they arrive. Defaults to True
-
-**Returns**: An async generator that yields log entries as dictionaries.
-
-{/*## GPU Prices
-
-### get_gpu_price(gpu_type)
-
-Gets the price for a specific GPU type.
-
-```python
-price = client.get_gpu_price("H100")
-```
-
-**Parameters**:
-- `gpu_type` (str, required): The type of GPU
-
-**Returns**: A dictionary containing pricing information.
-
-### get_all_gpu_prices()
-
-Gets prices for all available GPU types.
-
-```python
-prices = client.get_all_gpu_prices()
-```
-
-**Returns**: A list of dictionaries, each containing pricing information for a GPU type.*/}
-
-## Error Handling
-
-The RunRL client defines several exception classes for handling different types of errors:
-
-```python
-from runrl import (
-    RunRLError,           # Base exception class
-    AuthenticationError,  # Authentication failed
-    PermissionError,      # Permission denied
-    NotFoundError,        # Resource not found
-    APIServerError,       # Server error
-    RequestError          # Client request error
-)
-
-try:
-    # RunRL API call
-    client.get_run_details("non-existent-run")
-except NotFoundError as e:
-    print(f"Run not found: {e}")
-except AuthenticationError as e:
-    print(f"Authentication failed: {e}")
-except RunRLError as e:
-    print(f"General error: {e}")
+Use these models directly if you need typed validation or serialization within your application.

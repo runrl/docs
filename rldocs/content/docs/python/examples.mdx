@@ -1,261 +1,138 @@
 ---
-title: Complete Examples  
-description: Real-world examples and templates for successful Motte.ai training runs
+title: Examples
+description: Practical workflows built with the RunRL Python SDK.
 ---
 
-# Complete Examples
+# Examples
 
-Real-world templates and workflows for successful reinforcement learning training on Motte.ai.
+Below are small, end-to-end demonstrations showing how to combine prompt datasets, reward functions, and the SDK. The examples intentionally use small datasets so you can reproduce them quickly.
 
-## Example 1: Math Problem Solving
+## Fruit Preference RL (Beginner)
 
-Train a model to solve arithmetic problems with step-by-step reasoning.
+Train a model to answer fruit-related questions while rewarding banana-centric answers.
 
-### Prompt File (math_prompts.jsonl)
+```python
+from runrl import RunRLClient
+import json
 
-```json
-{"messages": [{"role": "system", "content": "You are a math tutor. Show your work step by step, then give your final answer in <answer></answer> tags."}, {"role": "user", "content": "What is 47 × 23?"}], "expected_result": "1081"}
-{"messages": [{"role": "system", "content": "You are a math tutor. Show your work step by step, then give your final answer in <answer></answer> tags."}, {"role": "user", "content": "Solve: 156 ÷ 12"}], "expected_result": "13"}
-{"messages": [{"role": "system", "content": "You are a math tutor. Show your work step by step, then give your final answer in <answer></answer> tags."}, {"role": "user", "content": "Calculate: (45 + 67) × 2 - 18"}], "expected_result": "206"}
+client = RunRLClient()
+
+prompts = [
+    {
+        "prompt": [{"role": "user", "content": "What is your favorite fruit?"}],
+        "expected_result": "banana",
+    },
+    {
+        "prompt": [{"role": "user", "content": "Name a red fruit."}],
+        "expected_result": "strawberry",
+    },
+]
+
+with open("fruit_prompts.jsonl", "w", encoding="utf-8") as f:
+    for row in prompts:
+        f.write(json.dumps(row) + "\n")
+
+prompt_file = client.files.upload_path("fruit_prompts.jsonl", file_type="prompt")
+
+reward_code = """
+def reward_fn(completion, **kwargs):
+    response = completion[0]["content"].lower()
+    expected = kwargs.get("expected_result", "").lower()
+    if expected and expected in response:
+        return 1.0
+    if "banana" in response:
+        return 0.8
+    return 0.0
+"""
+
+reward_file = client.files.create_from_content(
+    name="fruit_reward",
+    file_type="reward_function",
+    content=reward_code,
+)
+
+future = client.runs.create(
+    model="Qwen/Qwen2.5-3B-Instruct",
+    prompt_file_id=prompt_file.id,
+    reward_file_id=reward_file.id,
+    type="reward_function",
+    completion_length=256,
+    epochs=1,
+)
+
+run = future.result()
+print("Run", run.id, "finished with", run.status)
 ```
 
-### Reward Function (math_reward.py)
+## Math Reasoning (Intermediate)
+
+Reward step-by-step answers that include the correct final result inside `<answer>` tags.
 
 ```python
 import re
+from runrl import RunRLClient
 
-def reward_fn(prompt, response, expected_result=None):
-    """Reward function for math problem solving"""
-    
-    score = 0.0
-    
-    # Extract answer from response
-    answer_match = re.search(r'<answer>(.*?)</answer>', response, re.IGNORECASE)
-    if not answer_match:
-        return 0.0  # No answer provided
-    
-    extracted_answer = answer_match.group(1).strip()
-    
-    # Check if answer matches expected result
-    try:
-        if expected_result is not None:
-            if str(expected_result) in extracted_answer:
-                score += 1.0  # Correct answer
-            else:
-                score += 0.1  # Wrong answer but formatted correctly
-    except:
-        score += 0.0
-    
-    # Bonus for showing work
-    if any(word in response.lower() for word in ['step', 'first', 'then', 'multiply', 'divide', 'add', 'subtract']):
-        score += 0.2
-    
-    # Penalty for being too verbose
-    if len(response) > 1000:
-        score -= 0.1
-        
-    return max(0.0, min(1.0, score))
-```
+client = RunRLClient()
 
-### Training Configuration
-- **Model**: `Qwen/Qwen2.5-3B-Instruct`
-- **Epochs**: 2
-- **Completion Length**: 512 tokens
-- **Expected Cost**: ~$160 (2 hours)
+prompt_file = client.files.upload_path("math_prompts.jsonl", file_type="prompt")
 
-## Example 2: Code Review Assistant
+reward_code = """
+import re
 
-Train a model to provide helpful code review feedback.
-
-### Prompt File (code_review_prompts.jsonl)
-
-```json
-{"messages": [{"role": "system", "content": "You are a senior software engineer doing code review. Provide constructive feedback."}, {"role": "user", "content": "Review this Python function:\n\ndef calculate_total(items):\n    total = 0\n    for item in items:\n        total += item['price'] * item['quantity']\n    return total"}], "expected_keywords": ["error handling", "type hints", "docstring"]}
-{"messages": [{"role": "system", "content": "You are a senior software engineer doing code review. Provide constructive feedback."}, {"role": "user", "content": "Review this React component:\n\nfunction Button(props) {\n  return <button onClick={props.onClick}>{props.children}</button>;\n}"}], "expected_keywords": ["typescript", "props validation", "accessibility"]}
-```
-
-### Reward Function (code_review_reward.py)
-
-```python
-def reward_fn(prompt, response, expected_keywords=None):
-    """Reward function for code review quality"""
-    
-    score = 0.0
-    response_lower = response.lower()
-    
-    # Base score for providing any feedback
-    if len(response.strip()) > 50:
-        score += 0.3
-    
-    # Check for expected improvement areas
-    if expected_keywords:
-        keyword_matches = sum(1 for keyword in expected_keywords if keyword.lower() in response_lower)
-        score += (keyword_matches / len(expected_keywords)) * 0.4
-    
-    # Bonus for constructive language
-    positive_indicators = ['consider', 'suggest', 'could improve', 'might want', 'recommendation']
-    if any(indicator in response_lower for indicator in positive_indicators):
-        score += 0.2
-    
-    # Bonus for specific technical advice
-    if any(tech in response_lower for tech in ['typescript', 'error handling', 'testing', 'security', 'performance']):
-        score += 0.1
-        
-    return min(1.0, score)
-```
-
-### Training Configuration
-- **Model**: `Qwen/Qwen2.5-3B-Instruct`
-- **Epochs**: 3
-- **Completion Length**: 256 tokens
-- **Expected Cost**: ~$240 (3 hours)
-
-## Example 3: Customer Support Training
-
-Train a model for empathetic and helpful customer service responses.
-
-### Prompt File (support_prompts.jsonl)
-
-```json
-{"messages": [{"role": "system", "content": "You are a customer support agent. Be helpful, empathetic, and professional."}, {"role": "user", "content": "I'm having trouble with my order. It was supposed to arrive yesterday but hasn't come yet."}], "sentiment_target": "empathetic"}
-{"messages": [{"role": "system", "content": "You are a customer support agent. Be helpful, empathetic, and professional."}, {"role": "user", "content": "Your product broke after just one day! This is unacceptable!"}], "sentiment_target": "calming"}
-```
-
-### Reward Function (support_reward.py)
-
-```python
-def reward_fn(prompt, response, sentiment_target=None):
-    """Reward function for customer support quality"""
-    
-    score = 0.0
-    response_lower = response.lower()
-    
-    # Base score for reasonable length
-    if 20 <= len(response.strip()) <= 300:
-        score += 0.3
-    
-    # Check for empathetic language
-    empathy_words = ['understand', 'sorry', 'apologize', 'help', 'assist', 'concern']
-    empathy_count = sum(1 for word in empathy_words if word in response_lower)
-    score += min(0.3, empathy_count * 0.1)
-    
-    # Bonus for professional tone
-    professional_indicators = ['please', 'would be happy', 'let me', 'i can help']
-    if any(indicator in response_lower for indicator in professional_indicators):
-        score += 0.2
-    
-    # Penalty for negative language  
-    negative_words = ['no', "can't", 'impossible', 'wrong', 'stupid']
-    if any(word in response_lower for word in negative_words):
-        score -= 0.2
-        
-    return max(0.0, min(1.0, score))
-```
-
-### Training Configuration
-- **Model**: `Qwen/Qwen2.5-3B-Instruct` 
-- **Epochs**: 2
-- **Completion Length**: 256 tokens
-- **Expected Cost**: ~$160 (2 hours)
-
-## Example 4: Quick Testing Setup
-
-Minimal example for testing your setup with low cost.
-
-### Mini Test File (test_prompts.jsonl)
-```json
-{"messages": [{"role": "user", "content": "Say hello"}], "expected": "hello"}
-{"messages": [{"role": "user", "content": "Count to 3"}], "expected": "1, 2, 3"}
-{"messages": [{"role": "user", "content": "What color is the sky?"}], "expected": "blue"}
-```
-
-### Simple Test Reward Function
-```python
-def reward_fn(prompt, response, expected=None):
-    """Simple test reward function"""
-    if expected and expected.lower() in response.lower():
+def reward_fn(completion, **kwargs):
+    response = completion[0]["content"]
+    expected = (kwargs.get("expected_result") or "").strip()
+    match = re.search(r"<answer>(.*?)</answer>", response, re.IGNORECASE)
+    if not match:
+        return 0.0
+    answer = match.group(1).strip()
+    if expected and expected in answer:
         return 1.0
-    return 0.5 if len(response.strip()) > 5 else 0.0
+    return 0.3
+"""
+
+reward_file = client.files.create_from_content(
+    name="math_reward",
+    file_type="reward_function",
+    content=reward_code,
+)
+
+future = client.runs.create(
+    model="Qwen/Qwen2.5-7B-Instruct",
+    prompt_file_id=prompt_file.id,
+    reward_file_id=reward_file.id,
+    type="reward_function",
+    completion_length=512,
+    epochs=2,
+    learning_rate_multiplier=1.1,
+)
+
+run = future.result()
+print(run.status)
 ```
 
-### Test Configuration
-- **Model**: Any small model
-- **Epochs**: 1
-- **Completion Length**: 64 tokens
-- **Expected Cost**: ~$20-30 (15-20 minutes)
+## Customer Support Tone (Advanced)
 
-## Workflow Templates
+Use shared configurations to distribute recipes or replicate successful runs.
 
-### Standard Training Workflow
+```python
+config = client.shared_configurations.create(
+    name="Support Tone",
+    visibility="unlisted",
+    prompt_file_id="PROMPT_UUID",
+    reward_file_id="REWARD_UUID",
+    configuration={
+        "model": "Qwen/Qwen2.5-3B-Instruct",
+        "reward_mode": "reward_function",
+        "completion_length": 256,
+        "epochs": 2,
+    },
+)
 
-1. **Prepare data** (100+ diverse examples)
-2. **Create test run** (5-10 examples, minimal settings)
-3. **Validate setup** (check metrics, cancel after 10 min)
-4. **Launch full run** (complete dataset, optimized settings)
-5. **Monitor progress** (check every 30 minutes)
-6. **Analyze results** (cost efficiency, performance gains)
+print("Share via", config.shareable_url)
 
-### Cost-Optimized Workflow  
+copy_payload = client.shared_configurations.copy(config.uuid)
+print("Copied prompt id", copy_payload["prompt_file_id"])
+```
 
-1. **Start with 1 epoch** and increase if needed
-2. **Use 256-512 completion length** initially  
-3. **Monitor reward/cost ratio** closely
-4. **Cancel early** if no improvement after 1 hour
-5. **Iterate quickly** with smaller experiments
-
-## Best Practices
-
-### File Organization
-- **Name files clearly** - `math_prompts_v2.jsonl`
-- **Version your experiments** - Track what works
-- **Keep backups** - Save successful configurations
-
-### Cost Management
-- **Set budgets** before each run ($50, $100, $200)
-- **Monitor hourly progress** - $80 should show clear improvement
-- **Cancel underperforming runs** - Don't throw good money after bad
-
-### Reward Function Design
-- **Start simple** - Basic keyword/length checking
-- **Iterate complexity** - Add sophistication gradually  
-- **Test extensively** - Validate logic before training
-- **Document assumptions** - Comment your scoring logic
-
-## Monitoring Your Training
-
-### Key Metrics to Watch
-
-**During Training**:
-- **Reward curves** - Should trend upward over time
-- **Policy loss** - Should decrease as model learns
-- **KL divergence** - Should stay reasonable (not too high)
-- **Cost accumulation** - Track real-time spending
-
-**Success Indicators**:
-- Final reward > 0.7 (good performance)
-- Consistent improvement over time
-- Cost per reward improvement < $50
-- No errors in terminal logs
-
-### Using the Dashboard
-
-1. **Monitor active runs** - See current costs and status
-2. **Track total spending** - Understand your usage patterns
-3. **Quick navigation** - Jump to any run detail page
-4. **Real-time updates** - Costs and status update automatically
-
-### Using the Run Detail Page
-
-1. **Live metrics** - Charts update every few seconds
-2. **Terminal streaming** - Watch real-time logs
-3. **W&B integration** - Advanced experiment tracking
-4. **One-click cancellation** - Stop runs that aren't working
-
-## Need Help?
-
-- **File format issues?** Check [File Formats](/file-formats)
-- **Training problems?** See [Troubleshooting](/python/troubleshooting)
-- **Cost concerns?** Review [Getting Started](/python/installation#understanding-costs)
-- **Search questions?** Use Cmd/Ctrl+K in the web interface
-
-Ready to try these examples? [Start training now!](https://runrl.com/runs/create)
+More comprehensive notebooks live in the repository under `runrl-python/examples/`.

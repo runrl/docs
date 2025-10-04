@@ -1,345 +1,122 @@
 ---
 title: Troubleshooting
-description: Solutions for common issues with the RunRL Python client
+description: Resolve common RunRL Python SDK issues.
 ---
 
 # Troubleshooting
 
-This guide provides solutions for common issues you might encounter when using the RunRL Python client.
+## Authentication
 
-## Authentication Issues
+### `AuthenticationError`
 
-### Invalid API Key
+**Cause**: Missing or invalid API key. The client raises this immediately if neither the
+constructor nor `RUNRL_API_KEY` provides a token.
 
-**Symptom**: You receive an `AuthenticationError` when initializing the client.
-
-**Solution**:
-1. Verify that your API key is correct and starts with `rl-`
-2. Check if your API key has expired or been revoked
-3. Generate a new API key from the RunRL dashboard
+**Fix**:
 
 ```python
+from runrl import RunRLClient
+from runrl.exceptions import AuthenticationError
+
 try:
-    client = RunRL(api_key="rl-your-api-key")
-except AuthenticationError as e:
-    print(f"Authentication failed: {e}")
-    # Generate a new API key or check the existing one
+    client = RunRLClient()
+except AuthenticationError:
+    raise SystemExit("Set RUNRL_API_KEY or pass api_key explicitly.")
 ```
 
-### API Key Environment Variable Not Set
+Verify the key in the RunRL dashboard or rotate it if you suspect expiry.
 
-**Symptom**: You get a `ValueError` when trying to get the API key from an environment variable.
+### `AuthorizationError`
 
-**Solution**:
-1. Ensure you've set the environment variable correctly
-2. Check for typos in the environment variable name
-3. Verify the environment variable is accessible in your current session
+**Cause**: Key exists but lacks scopes for the requested action (e.g., uploading files with a
+read-only key).
 
-```bash
-# Set the environment variable
-export RUNRL_API_KEY="rl-your-api-key"
+**Fix**: Regenerate the key with `write` scope or call `client.api_keys.update(key_id, scopes=[...])`.
 
-# Verify it's set correctly
-echo $RUNRL_API_KEY
-```
+## File Uploads
 
-## File Upload Issues
+### `ValidationError` (422)
 
-### File Not Found
+**Cause**: Prompt JSONL is malformed or reward code doesn't define `reward_fn` correctly.
 
-**Symptom**: You get a `FileNotFoundError` when trying to upload a file.
+**Checklist**:
 
-**Solution**:
-1. Check if the file exists at the specified path
-2. Verify the path is correct (absolute vs. relative)
-3. Ensure you have read permissions for the file
+- Each JSONL line parses individually.
+- Prompt entries include a `prompt` field with message objects.
+- Reward function files define `def reward_fn(completion, **kwargs): ...`.
 
 ```python
-import os
-
-file_path = "path/to/file.jsonl"
-if not os.path.exists(file_path):
-    print(f"File not found: {file_path}")
-    # Handle the error (e.g., prompt for a valid file path)
-```
-
-### Invalid File Format
-
-**Symptom**: Your file upload is rejected by the API.
-
-**Solution**:
-1. Ensure your file is in the correct format (e.g., .jsonl for prompt files and .py for reward files)
-2. Validate the file content before uploading
-3. Check for any formatting errors in the file
-
-```python
-# Example: Validate a JSONL file before uploading
 import json
 
-def validate_jsonl(file_path):
-    try:
-        with open(file_path, 'r') as f:
-            for line_num, line in enumerate(f, 1):
-                try:
-                    json.loads(line)
-                except json.JSONDecodeError:
-                    print(f"Invalid JSON on line {line_num}: {line}")
-                    return False
-        return True
-    except Exception as e:
-        print(f"Error validating file: {e}")
-        return False
-
-if validate_jsonl("path/to/file.jsonl"):
-    client.upload_prompt_file("path/to/file.jsonl")
-else:
-    print("File validation failed")
+with open("prompt.jsonl") as fh:
+    for line in fh:
+        json.loads(line)  # raises if invalid
 ```
 
-## Run Creation Issues
+### `NotFoundError`
 
-### Missing Required Parameters
+**Cause**: Referencing a file that was deleted (soft deletes still hide it from the API).
 
-**Symptom**: You get a `ValueError` about missing required arguments when creating a run.
+**Fix**: Re-upload or list existing files: `client.files.list().items`.
 
-**Solution**:
-1. Ensure you're providing all required parameters (`model_name`, `prompt_file`, `reward_file`)
-2. Check for typos in parameter names
-3. Verify the parameter values are valid
+## Run Creation
 
-```python
-try:
-    run = client.create_run(
-        model_name="Qwen/Qwen3-4B",
-        prompt_file="file-123",
-        reward_file="file-456"
-    )
-except ValueError as e:
-    print(f"Error creating run: {e}")
-    # Handle the error (e.g., prompt for missing parameters)
-```
+### `ValidationError` (missing fields)
 
-### Turbo Mode Constraints
-
-**Symptom**: You get a `ValueError` about turbo mode requiring specific GPU settings.
-
-**Solution**:
-1. When using `turbo=True`, ensure `gpu_type="H100"` and `n_gpus=8`
-2. Alternatively, set `turbo=False` if you want to use different GPU settings
+**Cause**: Required parameters omitted (`model`, `prompt_file_id`, `reward_file_id`, `type`).
 
 ```python
-# Correct configuration for turbo mode
-run = client.create_run(
-    model_name="Qwen/Qwen3-4B",
-    prompt_file="file-123",
-    reward_file="file-456",
-    gpu_type="H100",
-    n_gpus=8,
-    turbo=True
-)
-
-# Alternative: Disable turbo mode for custom GPU settings
-run = client.create_run(
-    model_name="Qwen/Qwen3-4B",
-    prompt_file="file-123",
-    reward_file="file-456",
-    gpu_type="A100",
-    n_gpus=4,
-    turbo=False
+future = client.runs.create(
+    model="Qwen/Qwen2.5-3B-Instruct",
+    prompt_file_id="...",
+    reward_file_id="...",
+    type="reward_function",
 )
 ```
 
-## Resource Not Found Issues
+Ensure file IDs come from `File.id`, not `File.file_id` fields belonging to other users.
 
-### Run Not Found
+### Futures Stuck Polling
 
-**Symptom**: You get a `NotFoundError` when trying to access a run.
+If `future.result()` appears to hang:
 
-**Solution**:
-1. Verify the run ID is correct
-2. Check if the run has been deleted
-3. Ensure you have permission to access the run
+1. Call `future.status()` to fetch the latest run state.
+2. Check `client.runs.logs(run_id)` for setup errors.
+3. Confirm billing status—runs can pause provisioning if billing validation fails.
+
+### `RunFailedError`
+
+Raised when a run terminates in `FAILED`. Inspect `error_message`:
 
 ```python
+from runrl.exceptions import RunFailedError
+
 try:
-    run_details = client.get_run_details("run-123")
-except NotFoundError as e:
-    print(f"Run not found: {e}")
-    # List available runs to find the correct ID
-    runs = client.list_runs()
-    print("Available runs:")
-    for run in runs:
-        print(f"ID: {run['id']}, Status: {run['status']}")
+    run = future.result()
+except RunFailedError as err:
+    run = err.run
+    print(run.error_message)
 ```
 
-### File Not Found
+## Network & Rate Limiting
 
-**Symptom**: You get a `NotFoundError` when trying to access a file.
+### Connection Issues (`RunRLException` wrapping `httpx.RequestError`)
 
-**Solution**:
-1. Verify the file ID is correct
-2. Check if the file has been deleted
-3. Ensure you have permission to access the file
+- Check proxy/VPN settings.
+- Increase timeout: `RunRLClient(timeout=60)`.
+- Retry manually; the client already performs exponential backoff.
 
-```python
-try:
-    file_preview = client.get_prompt_file_preview("file-123")
-except NotFoundError as e:
-    print(f"File not found: {e}")
-    # List available files to find the correct ID
-    files = client.list_prompt_files()
-    print("Available prompt files:")
-    for file in files:
-        print(f"ID: {file['id']}, Name: {file['friendly_name']}")
-```
+### `RateLimitError`
 
-## Network and API Issues
+Indicates the key exceeded its hourly quota. Monitor the headers (`X-RateLimit-Remaining`) or lower
+polling frequency via `poll_interval`.
 
-### Connection Errors
+## Package Import Errors
 
-**Symptom**: You get a `RunRLError` with a message about HTTP request failure.
-
-**Solution**:
-1. Check your internet connection
-2. Verify the API endpoint is accessible
-3. Check if there are any firewall or proxy issues
-
-```python
-try:
-    client.list_runs()
-except RunRLError as e:
-    if "HTTP request failed" in str(e):
-        print("Network connection issue. Please check your internet connection.")
-    else:
-        print(f"Error: {e}")
-```
-
-### API Server Errors
-
-**Symptom**: You get an `APIServerError` with a 5xx status code.
-
-**Solution**:
-1. The issue is on the server side, not your code
-2. Wait and try again later
-3. Check the RunRL status page for any reported outages
-
-```python
-import time
-
-max_retries = 3
-retry_delay = 5  # seconds
-
-for attempt in range(max_retries):
-    try:
-        result = client.list_runs()
-        break  # Success, exit the loop
-    except APIServerError as e:
-        print(f"Server error (attempt {attempt+1}/{max_retries}): {e}")
-        if attempt < max_retries - 1:
-            print(f"Retrying in {retry_delay} seconds...")
-            time.sleep(retry_delay)
-        else:
-            print("Max retries reached. Please try again later.")
-```
-
-## Asynchronous Operations
-
-### Streaming Logs Issues
-
-**Symptom**: You get an error when trying to use `stream_logs()`.
-
-**Solution**:
-1. Ensure you're using the async function correctly
-2. Use `asyncio.run()` to run the async function from synchronous code
-3. If in an environment that already has an event loop (e.g., Jupyter), use a different approach
-
-```python
-# Correct way to use stream_logs in a script
-import asyncio
-
-async def stream_logs_example():
-    async for log_entry in client.stream_logs("run-123", follow=True):
-        print(f"[{log_entry['timestamp']}] {log_entry['message']}")
-
-# Run the async function
-asyncio.run(stream_logs_example())
-```
-
-For Jupyter notebooks or environments with an existing event loop:
-
-```python
-import nest_asyncio
-import asyncio
-
-# Apply nest_asyncio to allow nested event loops
-nest_asyncio.apply()
-
-async def stream_logs_example():
-    async for log_entry in client.stream_logs("run-123", follow=True):
-        print(f"[{log_entry['timestamp']}] {log_entry['message']}")
-
-# Run the async function
-await stream_logs_example()
-```
-
-## Debugging Tips
-
-### Enable Verbose Logging
-
-To get more information about what's happening, you can enable verbose logging:
-
-```python
-import logging
-
-# Set up logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-
-# Now RunRL client operations will log detailed information
-client = RunRL(api_key="rl-your-api-key")
-```
-
-### Inspect Request and Response Details
-
-For advanced debugging, you can use a request session with a custom event hook:
-
-```python
-import requests
-from runrl import RunRL
-
-# Create a session with logging
-session = requests.Session()
-
-def log_request_details(response, *args, **kwargs):
-    request = response.request
-    print(f"Request: {request.method} {request.url}")
-    print(f"Response: {response.status_code} {response.reason}")
-    
-session.hooks["response"] = [log_request_details]
-
-# Use the custom session with RunRL
-# Note: This is a hypothetical example and not directly supported by the RunRL client
-# You would need to modify the RunRL client to accept a custom session
-```
-
-## Common Error Messages and Solutions
-
-| Error Message | Likely Cause | Solution |
-|---------------|--------------|----------|
-| "Authentication failed: Unauthorized" | Invalid API key | Check your API key and regenerate if necessary |
-| "Missing required arguments" | Required parameters not provided | Ensure all required parameters are included |
-| "Resource not found" | Invalid ID or deleted resource | Verify the resource ID and check if it exists |
-| "Permission denied" | Insufficient permissions | Ensure you have the necessary permissions for the operation |
-| "Turbo mode requires 8xH100 GPUs" | Incompatible GPU settings with turbo mode | Use H100 GPUs with n_gpus=8, or set turbo=False |
-| "HTTP request failed" | Network or connectivity issue | Check your internet connection and try again |
-| "Server error" | Issue on the RunRL server | Wait and try again later |
+- Install the SDK in the active environment: `pip install runrl`.
+- If running tests or examples, set `PYTHONPATH=. python -m pytest` so local modules resolve before publishing.
 
 ## Getting Help
 
-If you're still experiencing issues after trying the solutions in this guide:
-
-1. Check the [RunRL documentation](https://docs.runrl.com) for updates
-2. Contact RunRL support at founders@runrl.com
-3. Visit the [RunRL dicussion board](https://github.com/runrl/runrl-python/discussions) for help from other users
+- For API responses not covered here, log the payload: `response.json()` using `httpx` hooks.
+- Report SDK bugs or feature requests to `support@runrl.com` with stack traces and run IDs.

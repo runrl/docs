@@ -1,171 +1,115 @@
 ---
-title: Creating Your First Run
-description: Complete walkthrough for launching your first training run on RunRL
+title: Launching Your First Run
+description: Step-by-step walkthrough using the RunRL Python SDK.
 ---
 
-# Creating Your First Run
+# Launching Your First Run
 
-Step-by-step guide for launching your first successful reinforcement learning training run.
+This guide uses the `RunRLClient` to upload assets, launch a run, and monitor completion. It mirrors the flows exposed in the RunRL web UI but keeps everything scriptable.
 
-## Before You Start
+## Prerequisites
 
-Ensure you have completed [account setup](/python/installation) including:
+- SDK installed and configured (see [Installation & Setup](/python/installation)).
+- Prompt dataset stored as JSONL lines.
+- Reward function defined in Python with a `reward_fn(completion, **kwargs)` signature.
 
-- ✅ Email verification
-- ✅ Billing information added
-
-## Step 1: Prepare Your Training Data
-
-### Prompt File Format
-
-Create a JSONL file with training examples:
-
-```json
-{"messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "What is 2+2?"}], "expected_result": "4"}
-{"messages": [{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": "Explain gravity"}], "expected_result": "A fundamental force"}
-```
-
-### Simple Reward Function
-
-Start with this basic reward function:
+## 1. Upload Artifacts
 
 ```python
-def reward_fn(prompt, response, expected_result=None):
-    """Basic reward function for testing"""
-    
-    # Too short responses get no reward
-    if len(response.strip()) < 10:
-        return 0.0
-        
-    # Too long responses get penalty  
-    if len(response.strip()) > 500:
-        return 0.3
-        
-    # Check if expected content is present
-    if expected_result and expected_result.lower() in response.lower():
-        return 1.0
-        
-    # Default reasonable score
-    return 0.6
+from runrl import RunRLClient
+
+client = RunRLClient()
+
+prompt = client.files.upload_path(
+    "prompt_examples.jsonl",
+    file_type="prompt",
+    name="qa_prompts",
+)
+
+reward = client.files.create_from_content(
+    name="keyword_reward",
+    file_type="reward_function",
+    content="""\
+def reward_fn(completion, **kwargs):
+    response = completion[0]["content"].lower()
+    return 1.0 if "banana" in response else 0.0
+""",
+)
 ```
 
-## Step 2: Navigate to Create Run
+## 2. Launch the Run
 
-1. **Go to [Create Run](https://runrl.com/runs/create)**
-2. **Note the $80/hr cost display** next to the launch button
-3. **Choose your model** from the curated list
+`client.runs.create` returns a `RunRLPollingFuture`. The initial run payload is available immediately; call `.result()` to wait for terminal status.
 
-## Step 3: Upload Your Files
+```python
+future = client.runs.create(
+    model="Qwen/Qwen2.5-3B-Instruct",
+    prompt_file_id=prompt.id,
+    reward_file_id=reward.id,
+    type="reward_function",
+    completion_length=256,
+    epochs=1,
+)
 
-### Upload Prompts
-1. **Drag and drop** your JSONL file into the upload area
-2. **Wait for upload completion** and validation
-3. **Review preview** to ensure format is correct
+print("submitted run", future.initial.id, future.initial.status)
+run = future.result()  # Blocks until COMPLETED / FAILED / CANCELLED
+print("final status", run.status)
+```
 
-### Create Reward Function
-1. **Select "Reward Function" mode**
-2. **Paste your reward function code** into the editor
-3. **Test with sample data** if available
+### Async variant
 
-## Step 4: Configure Training Settings
+```python
+import asyncio
+from runrl import AsyncRunRLClient
 
-### Recommended First Run Settings
-- **Completion Length**: 256 tokens (balance cost vs quality)
-- **Epochs**: 1 (start conservatively)
-- **Learning Rate Multiplier**: 1.0 (default setting)
 
-### Skip Advanced Options
-- **Tools**: Leave unchecked for first run
-- **HuggingFace Token**: Only needed for gated models
+async def main():
+    async with AsyncRunRLClient() as client:
+        future = await client.runs.create(
+            model="Qwen/Qwen2.5-3B-Instruct",
+            prompt_file_id="PROMPT_UUID",
+            reward_file_id="REWARD_UUID",
+            type="reward_function",
+        )
+        run = await future
+        print(run.status)
 
-## Step 5: Launch and Monitor
+asyncio.run(main())
+```
 
-### Starting the Run
-1. **Review all settings** one final time
-2. **Click "Start Reinforcement Learning"**
-3. **Note the cost reminder** ($80/hr)
-4. **Automatically redirected** to run detail page
+## 3. Monitor Progress
 
-### Monitoring Progress
+```python
+history = client.runs.history(run.id)
+logs = client.runs.logs(run.id)
+metrics = client.runs.metrics(run.id)  # Weights & Biases snapshot
 
-**Watch for status changes**:
-- `PENDING` → Run queued for provisioning
-- `PROVISIONING` → GPU instance being allocated  
-- `SETTING_UP` → Environment being prepared
-- `READY` → About to start training
-- `RUNNING` → 💸 **Billing active** - $80/hour
+for entry in history:
+    print(entry["status"], entry["timestamp"])
+```
 
-**Key metrics to monitor**:
-- **Reward curves** - Should trend upward
-- **Policy loss** - Should decrease over time  
-- **KL divergence** - Should stay reasonable
-- **Cost accumulation** - Track spending in real-time
+To stream logs incrementally:
 
-## Step 6: Understanding Your Results
+```python
+for line in client.runs.stream_logs(run.id):
+    print(line)
+```
 
-### Successful Training Indicators
-- **Reward improvement** - Final > initial rewards
-- **Stable metrics** - Charts show clear trends
-- **No errors** - Terminal logs are clean
-- **Cost efficiency** - Reasonable cost per improvement
+## 4. Cancel When Needed
 
-### When to Cancel
-Cancel your run if:
-- **No improvement** after 30+ minutes
-- **Costs exceed budget** for your experiment  
-- **Error messages** appear in terminal
-- **Metrics plateau early** with no progress
+```python
+client.runs.cancel(run.id)
+```
 
-## Step 7: Post-Run Analysis
+This will also stop the future from polling—`future.cancel()` internally calls the same endpoint.
 
-After completion or cancellation:
+## 5. Clean Up
 
-1. **Review final metrics** in Weights & Biases
-2. **Analyze cost efficiency** - improvement per dollar
-3. **Document learnings** - what worked, what didn't
-4. **Plan next iteration** - adjustments for next run
+Files and runs are soft-deleted by default. Permanently removing a file requires `force=True`:
 
-## Success Checklist
+```python
+client.files.delete(prompt.id, force=True)
+client.files.delete(reward.id, force=True)
+```
 
-Your first run was successful if:
-
-- [ ] **Completed without errors** or achieved target metrics
-- [ ] **Cost stayed within budget** expectations
-- [ ] **Metrics showed improvement** from baseline
-- [ ] **You understand** the training process flow
-
-## Common First-Run Issues
-
-### Run Stuck in "PENDING"
-**Cause**: High demand or billing issues  
-**Solution**: Check billing setup, wait, or contact support
-
-### No Metrics Appearing  
-**Cause**: W&B integration not working
-**Solution**: Refresh page, check for errors in terminal
-
-### Reward Function Errors
-**Cause**: Syntax errors or wrong function signature
-**Solution**: Check function name is `reward_fn` with correct parameters
-
-### High Costs, No Improvement
-**Cause**: Poor reward function or difficult task
-**Solution**: Simplify reward logic, reduce complexity
-
-## Next Steps
-
-After your first successful run:
-
-1. **Experiment with different models** and see performance differences
-2. **Try more complex reward functions** for nuanced training
-3. **Scale up with larger datasets** and longer training
-4. **Read [Examples](/python/examples)** for advanced techniques
-
-## Need Help?
-
-- **Search the docs** using Cmd/Ctrl+K
-- **Check [Troubleshooting](/python/troubleshooting)** for common issues  
-- **Review [Examples](/python/examples)** for working templates
-- **Monitor [Dashboard](https://runrl.com/dashboard)** for system status
-
-Ready to create your first run? [Launch now!](https://runrl.com/runs/create)
+Ready for more? Browse the [API Reference](/python/api-reference) or copy a complete example from the [Examples gallery](/python/examples).
