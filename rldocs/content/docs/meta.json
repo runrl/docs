@@ -5,6 +5,8 @@
     "quickstart",
     "rest-api",
     "file-formats",
+    "stateful-mcp-tutorial",
+    "python",
     "changelog"
   ]
 }
