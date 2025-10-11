@@ -81,6 +81,15 @@ Payload fields for `create`:
 - `learning_rate_multiplier` (float, optional, default 1.0)
 - `sft_file_id`, `tool_ids`, `package_requirements`, `hf_token`
 
+**LoRA (Low-Rank Adaptation) Parameters:**
+
+- `use_lora` (bool, optional, default False) – Enable parameter-efficient fine-tuning
+- `lora_rank` (int, optional, default 16) – LoRA rank, controls adaptation capacity (0 = disabled)
+- `lora_alpha` (int, optional, default 16) – Scaling factor, typically 2× rank
+- `lora_dropout` (float, optional, default 0) – Dropout rate for regularization
+
+LoRA enables 2-3× faster training with significantly reduced memory usage, making it ideal for larger models on limited hardware.
+
 ---
 
 ## Deployments

@@ -135,4 +135,40 @@ copy_payload = client.shared_configurations.copy(config.uuid)
 print("Copied prompt id", copy_payload["prompt_file_id"])
 ```
 
+## LoRA Training (Efficient Fine-Tuning)
+
+Train larger models faster with parameter-efficient LoRA fine-tuning.
+
+```python
+from runrl import RunRLClient
+
+client = RunRLClient()
+
+# Standard LoRA configuration (recommended)
+future = client.runs.create(
+    model="Qwen/Qwen2.5-7B-Instruct",
+    prompt_file_id="PROMPT_UUID",
+    reward_file_id="REWARD_UUID",
+    type="reward_function",
+    completion_length=1024,
+    # Enable LoRA
+    use_lora=True,
+    lora_rank=32,
+    lora_alpha=64,
+)
+
+run = future.result()
+print(f"LoRA training completed: {run.status}")
+```
+
+**LoRA Benefits:**
+- **2-3× faster training** compared to full fine-tuning
+- **Significantly lower memory usage** – train larger models on smaller GPUs
+- **Often better generalization** – reduces overfitting
+
+**Configuration Tips:**
+- Standard LoRA: `lora_rank=32, lora_alpha=64`
+- High-quality LoRA: `lora_rank=64, lora_alpha=128`
+- Fast LoRA: `lora_rank=16, lora_alpha=32`
+
 More comprehensive notebooks live in the repository under `runrl-python/examples/`.

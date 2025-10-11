@@ -4,6 +4,12 @@ title: Changelog
 ---
 Here are some of the user-facing changes we've made to RunRL recently.
 
+## October 11, 2025
+- **LoRA Support**: Added comprehensive support for parameter-efficient fine-tuning with LoRA (Low-Rank Adaptation)
+  - Enables 2-3× faster training with significantly reduced memory usage
+  - New parameters: `use_lora`, `lora_rank`, `lora_alpha`, `lora_dropout`
+  - Python SDK updated to v0.2.2 with full LoRA documentation and examples
+
 ## October 3, 2025
 - **Dataset wizard** (beta): Easily generate reward functions by uploading a dataset and describing the task you want an LLM to improve at 
 - **API parity with the UI**: The REST API now covers every user-facing feature—files, runs, deployments, tools, shared configurations, validation, and search.
