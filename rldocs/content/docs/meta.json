@@ -1,11 +1,11 @@
 {
-  "title": "Motte.ai Documentation",
+  "title": "RunRL Documentation",
   "pages": [
     "index",
     "quickstart",
     "rest-api",
     "file-formats",
-    "stateful-mcp-tutorial",
+    "tutorials",
     "python",
     "changelog"
   ]
