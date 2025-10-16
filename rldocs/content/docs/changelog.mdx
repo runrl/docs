@@ -8,6 +8,7 @@ Here are some of the user-facing changes we've made to RunRL recently.
 - **LoRA Support**: Added comprehensive support for parameter-efficient fine-tuning with LoRA (Low-Rank Adaptation)
   - Enables 2-3× faster training with significantly reduced memory usage
   - New parameters: `use_lora`, `lora_rank`, `lora_alpha`, `lora_dropout`
+  - Automatic MoE detection: Mixture-of-Experts models (e.g., Qwen3-Coder-30B-A3B-Instruct) now automatically use attention-only LoRA for vLLM compatibility
   - Python SDK updated to v0.2.2 with full LoRA documentation and examples
 
 ## October 3, 2025
