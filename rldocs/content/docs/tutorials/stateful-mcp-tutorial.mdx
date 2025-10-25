@@ -28,7 +28,7 @@ A stateful MCP environment consists of four key components:
 
 ### 1. The MCP Server (State Owner)
 
-The MCP server owns all gameplay state and exposes tools that agents can call. Unlike stateless APIs, it maintains session-specific data across multiple tool invocations.
+The MCP server owns all state and exposes tools that agents can call. Unlike stateless APIs, it maintains session-specific data across multiple tool invocations.
 
 **Key responsibilities:**
 - Store per-session state (scores, history, resources, etc.)
@@ -52,7 +52,6 @@ Creates training tasks with initial prompts and state parameters.
 
 **Key responsibilities:**
 - Generate JSONL files with task specifications
-- Include server IDs and tool names
 - Provide agent instructions and hints
 - Create curriculum variations (difficulty levels, parameters)
 
@@ -429,11 +428,6 @@ class NumberGuessingEnv:
         except (json.JSONDecodeError, KeyError) as e:
             # Handle errors gracefully
             return f"Error: {str(e)}", 0.0, True, {"error": str(e), "raw_result": result}
-
-    def reset(self) -> str:
-        """Reset environment (handled by session cleanup in server)."""
-        self.done = False
-        return "Environment reset. Start a new session."
 ```
 
 **Design principles:**
